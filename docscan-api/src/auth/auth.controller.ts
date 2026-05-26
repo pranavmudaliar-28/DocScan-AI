@@ -16,4 +16,10 @@ export class AuthController {
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('guest')
+  guestLogin() {
+    return this.authService.guestLogin();
+  }
 }

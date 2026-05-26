@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
@@ -33,7 +33,35 @@ export class StorageService {
       // URL expires in 15 minutes
       return await getSignedUrl(this.s3Client, command, { expiresIn: 900 });
     } catch (error) {
-      throw new InternalServerErrorException('Failed to generate pre-signed URL');
+      throw new InternalServerErrorException('Failed to generate pre-signed upload URL');
+    }
+  }
+
+  async generateDownloadUrl(key: string, originalFilename?: string): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ResponseContentDisposition: originalFilename ? `attachment; filename="${originalFilename}"` : undefined
+      });
+
+      // URL expires in 15 minutes
+      return await getSignedUrl(this.s3Client, command, { expiresIn: 900 });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to generate pre-signed download URL');
+    }
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      await this.s3Client.send(command);
+    } catch (error) {
+      console.error('Failed to delete file from S3:', error);
+      // We log but don't strictly throw if S3 delete fails, as the DB record will be deleted anyway
     }
   }
 }

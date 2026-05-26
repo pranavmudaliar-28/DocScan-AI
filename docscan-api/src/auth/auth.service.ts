@@ -53,4 +53,33 @@ export class AuthService {
       }
     };
   }
+
+  async guestLogin() {
+    const guestId = Math.random().toString(36).substring(2, 10);
+    const email = `guest_${guestId}@docscan.ai`;
+    const passwordHash = await bcrypt.hash(guestId, await bcrypt.genSalt());
+    
+    const user = new this.userModel({
+      email,
+      passwordHash,
+      tier: 'FREE',
+      profile: {
+        firstName: 'Guest',
+        lastName: 'User'
+      }
+    });
+
+    await user.save();
+
+    const payload = { sub: user._id, email: user.email };
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user._id,
+        email: user.email,
+        profile: user.profile,
+        tier: user.tier,
+      }
+    };
+  }
 }

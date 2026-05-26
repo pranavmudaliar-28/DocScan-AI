@@ -67,4 +67,43 @@ export class DocumentService {
   async getUserDocuments(userId: string) {
     return this.documentModel.find({ ownerId: userId }).sort({ createdAt: -1 }).exec();
   }
+
+  async updateDocument(userId: string, documentId: string, updates: Partial<DocumentDoc>) {
+    const document = await this.documentModel.findOneAndUpdate(
+      { _id: documentId, ownerId: userId },
+      { $set: updates },
+      { new: true }
+    );
+    
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    
+    return document;
+  }
+
+  async deleteDocument(userId: string, documentId: string) {
+    const document = await this.documentModel.findOne({ _id: documentId, ownerId: userId });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Delete from S3
+    await this.storageService.deleteFile(document.s3Key);
+
+    // Delete from DB
+    await this.documentModel.deleteOne({ _id: documentId });
+
+    return { success: true };
+  }
+
+  async getDownloadUrl(userId: string, documentId: string) {
+    const document = await this.documentModel.findOne({ _id: documentId, ownerId: userId });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const downloadUrl = await this.storageService.generateDownloadUrl(document.s3Key, document.filename);
+    return { downloadUrl };
+  }
 }

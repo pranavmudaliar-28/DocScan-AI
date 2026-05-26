@@ -1,12 +1,12 @@
 package com.example.docscanai.ui.main
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Description
@@ -17,25 +17,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation3.runtime.NavKey
 import com.example.docscanai.data.DefaultDataRepository
-
-private val DeepNavy = Color(0xFF0F172A)
-private val IntelligentBlue = Color(0xFF3B82F6)
-private val SlateLight = Color(0xFFCBD5E1)
 
 @Composable
 fun MainScreen(
-    onItemClick: (NavKey) -> Unit,
+    onScan: () -> Unit,
+    onGallery: () -> Unit,
+    onSettings: () -> Unit,
+    onScanItem: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
 ) {
@@ -43,137 +40,212 @@ fun MainScreen(
     val recentScans = if (state is MainScreenUiState.Success) {
         (state as MainScreenUiState.Success).data
     } else emptyList()
-    HomeScreen(recentScans = recentScans)
+
+    HomeScreen(
+        recentScans = recentScans,
+        onScan      = onScan,
+        onGallery   = onGallery,
+        onSettings  = onSettings,
+        onScanItem  = onScanItem,
+    )
 }
 
 @Composable
-internal fun HomeScreen(recentScans: List<String>, modifier: Modifier = Modifier) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DeepNavy)
-    ) {
+internal fun HomeScreen(
+    recentScans: List<String>,
+    onScan: () -> Unit = {},
+    onGallery: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    onScanItem: (String) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val primary   = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // Ambient gradient orbs
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush  = Brush.radialGradient(
+                    listOf(primary.copy(alpha = 0.07f), Color.Transparent),
+                    center = Offset(size.width * 0.82f, size.height * 0.14f),
+                    radius = size.width * 0.55f
+                ),
+                radius = size.width * 0.55f,
+                center = Offset(size.width * 0.82f, size.height * 0.14f)
+            )
+            drawCircle(
+                brush  = Brush.radialGradient(
+                    listOf(secondary.copy(alpha = 0.05f), Color.Transparent),
+                    center = Offset(size.width * 0.10f, size.height * 0.60f),
+                    radius = size.width * 0.44f
+                ),
+                radius = size.width * 0.44f,
+                center = Offset(size.width * 0.10f, size.height * 0.60f)
+            )
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            item { AppHeader() }
+            item { AppHeader(onSettings = onSettings) }
             item {
-                Spacer(Modifier.height(4.dp))
-                ScanButton()
+                Spacer(Modifier.height(8.dp))
+                ScanCta(onScan = onScan)
             }
             item {
-                Spacer(Modifier.height(14.dp))
-                QuickActionsRow()
+                Spacer(Modifier.height(12.dp))
+                FeaturePills()
             }
             item {
-                Spacer(Modifier.height(24.dp))
-                RecentScansSection(recentScans)
+                Spacer(Modifier.height(20.dp))
+                QuickActionsRow(onGallery = onGallery)
+            }
+            item {
+                Spacer(Modifier.height(28.dp))
+                RecentScansSection(
+                    scans      = recentScans,
+                    onScanItem = onScanItem,
+                    onScan     = onScan,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AppHeader() {
+private fun AppHeader(onSettings: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Row(verticalAlignment = Alignment.Baseline) {
-                Text("DocScan", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("DocScan", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.width(4.dp))
-                Text("AI", fontSize = 22.sp, fontWeight = FontWeight.Light, color = IntelligentBlue)
+                Text("AI", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             }
             Text(
                 "Scan & analyze documents",
-                fontSize = 12.sp,
-                color = SlateLight.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .background(Color.White.copy(alpha = 0.08f), CircleShape)
-                .clickable {},
+                .size(42.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .clip(CircleShape)
+                .clickable(onClick = onSettings),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Settings, "Settings", tint = SlateLight, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.Settings, "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
     }
 }
 
 @Composable
-private fun ScanButton() {
+private fun ScanCta(onScan: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .height(200.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(210.dp)
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(
-                Brush.radialGradient(
-                    listOf(IntelligentBlue.copy(alpha = 0.25f), Color(0xFF112240)),
-                    radius = 520f
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
+                    )
                 )
             )
-            .clickable {},
+            .clickable(onClick = onScan),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.Transparent,
-            border = BorderStroke(1.5.dp, IntelligentBlue.copy(alpha = 0.35f))
+            shape    = MaterialTheme.shapes.extraLarge,
+            color    = Color.Transparent,
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         ) {}
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
-                    .size(68.dp)
-                    .background(IntelligentBlue, CircleShape),
+                    .size(72.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                        ),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.CameraAlt,
-                    contentDescription = "Scan",
-                    tint = Color.White,
-                    modifier = Modifier.size(34.dp)
-                )
+                Icon(Icons.Default.CameraAlt, "Scan", tint = Color.White, modifier = Modifier.size(36.dp))
             }
-            Spacer(Modifier.height(14.dp))
-            Text(
-                "Tap to Scan Document",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
+            Spacer(Modifier.height(16.dp))
+            Text("Tap to Scan Document", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
             Spacer(Modifier.height(4.dp))
-            Text(
-                "Camera · Auto-detect · AI extraction",
-                fontSize = 12.sp,
-                color = SlateLight.copy(alpha = 0.55f)
-            )
+            Text("Camera · Auto-detect · AI extraction", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun QuickActionsRow() {
+private fun FeaturePills() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        listOf("OCR Text", "AI Summary", "PDF Export", "Multi-page").forEach { label ->
+            Surface(
+                shape  = MaterialTheme.shapes.extraSmall,
+                color  = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+            ) {
+                Text(
+                    label,
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionsRow(onGallery: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        QuickActionCard(Icons.Default.Image, "Gallery", "Import image", Modifier.weight(1f))
-        QuickActionCard(Icons.Default.Description, "PDF", "Open file", Modifier.weight(1f))
+        QuickActionCard(
+            icon     = Icons.Default.Image,
+            label    = "Gallery",
+            subtitle = "Import image",
+            modifier = Modifier.weight(1f),
+            onClick  = onGallery
+        )
+        QuickActionCard(
+            icon     = Icons.Default.Description,
+            label    = "PDF",
+            subtitle = "Open file",
+            modifier = Modifier.weight(1f),
+            onClick  = onGallery
+        )
     }
 }
 
@@ -182,54 +254,80 @@ private fun QuickActionCard(
     icon: ImageVector,
     label: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
-    Box(
-        modifier = modifier
-            .height(96.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.07f))
-            .clickable {}
-            .padding(16.dp)
+    Surface(
+        modifier = modifier.height(100.dp),
+        shape    = MaterialTheme.shapes.large,
+        color    = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column {
-            Icon(icon, label, tint = IntelligentBlue, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.height(8.dp))
-            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-            Text(subtitle, fontSize = 11.sp, color = SlateLight.copy(alpha = 0.5f))
+        Box(modifier = Modifier.fillMaxSize().clickable(onClick = onClick).padding(16.dp)) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            MaterialTheme.shapes.small
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(label,    style = MaterialTheme.typography.labelLarge,  color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,   color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
 @Composable
-private fun RecentScansSection(scans: List<String>) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-    ) {
-        Text("Recent Scans", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+private fun RecentScansSection(
+    scans: List<String>,
+    onScanItem: (String) -> Unit,
+    onScan: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Recent Scans", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
+            if (scans.isNotEmpty()) {
+                Text("See all", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
+
         if (scans.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White.copy(alpha = 0.04f)),
-                contentAlignment = Alignment.Center
+            Surface(
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                shape    = MaterialTheme.shapes.large,
+                color    = MaterialTheme.colorScheme.surfaceContainerLow,
+                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Text(
-                    "No scans yet — tap the button above to start",
-                    fontSize = 13.sp,
-                    color = SlateLight.copy(alpha = 0.4f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("No scans yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "Tap the scan button above to get started",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
+                }
             }
         } else {
             scans.forEach { scan ->
-                ScanItem(scan)
+                ScanItem(name = scan, onClick = { onScanItem(scan) })
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -237,25 +335,33 @@ private fun RecentScansSection(scans: List<String>) {
 }
 
 @Composable
-private fun ScanItem(name: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.07f))
-            .clickable {}
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun ScanItem(name: String, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape    = MaterialTheme.shapes.medium,
+        color    = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(IntelligentBlue.copy(alpha = 0.18f), RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Description, null, tint = IntelligentBlue, modifier = Modifier.size(20.dp))
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        MaterialTheme.shapes.small
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Tap to open", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+            }
         }
-        Spacer(Modifier.width(12.dp))
-        Text(name, fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Medium)
     }
 }
