@@ -1,12 +1,11 @@
 package com.example.docscanai.data
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 
 interface DataRepository {
-  val data: Flow<List<String>>
+    val data: Flow<List<ScanRecord>>
 }
 
 class DefaultDataRepository : DataRepository {
-  override val data: Flow<List<String>> = flow { emit(emptyList()) }
+    override val data: Flow<List<ScanRecord>> = ScanHistoryRepository.scans
 }

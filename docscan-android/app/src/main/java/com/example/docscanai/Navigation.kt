@@ -1,5 +1,6 @@
 package com.example.docscanai
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -11,6 +12,9 @@ import com.example.docscanai.ui.onboarding.OnboardingScreen
 import com.example.docscanai.ui.result.ScanResultScreen
 import com.example.docscanai.ui.settings.SettingsScreen
 import com.example.docscanai.ui.splash.SplashScreen
+import com.example.docscanai.ui.convert.ConvertScreen
+import com.example.docscanai.ui.editor.TextEditScreen
+import com.example.docscanai.ui.viewer.DocumentEditScreen
 import com.example.docscanai.ui.viewer.DocumentViewerScreen
 
 @Composable
@@ -39,47 +43,89 @@ fun MainNavigation() {
                     onScan     = { backStack.add(CameraScan) },
                     onGallery  = { backStack.add(GalleryImport) },
                     onSettings = { backStack.add(AppSettings) },
-                    onScanItem = { id -> backStack.add(DocumentViewer(docId = id)) },
+                    onConvert  = { backStack.add(Convert) },
+                    onScanItem = { record ->
+                        backStack.add(DocumentViewer(docId = record.id, imageUri = record.imageUri))
+                    },
                 )
             }
 
             entry<CameraScan> {
                 CameraScanScreen(
                     onBack    = { backStack.removeLastOrNull() },
-                    onCapture = {
-                        backStack.add(ScanResult(scanId = "scan_${System.currentTimeMillis()}"))
+                    onGallery = { backStack.add(GalleryImport) },
+                    onCapture = { uri: Uri ->
+                        backStack.add(
+                            ScanResult(
+                                scanId   = "scan_${System.currentTimeMillis()}",
+                                imageUri = uri.toString(),
+                            )
+                        )
                     },
                 )
             }
 
             entry<GalleryImport> {
                 GalleryImportScreen(
-                    onBack            = { backStack.removeLastOrNull() },
-                    onImageSelected   = {
-                        backStack.add(ScanResult(scanId = "gallery_${System.currentTimeMillis()}"))
+                    onBack          = { backStack.removeLastOrNull() },
+                    onImageSelected = { uri: Uri ->
+                        backStack.add(
+                            ScanResult(
+                                scanId   = "gallery_${System.currentTimeMillis()}",
+                                imageUri = uri.toString(),
+                            )
+                        )
+                    },
+                    onCamera = {
+                        backStack[backStack.lastIndex] = CameraScan
                     },
                 )
             }
 
             entry<ScanResult> { key ->
                 ScanResultScreen(
-                    scanId          = key.scanId,
-                    onBack          = { backStack.removeLastOrNull() },
-                    onViewDocument  = { backStack.add(DocumentViewer(docId = key.scanId)) },
+                    scanId         = key.scanId,
+                    imageUri       = key.imageUri,
+                    onBack         = { backStack.removeLastOrNull() },
+                    onViewDocument = {
+                        backStack.add(DocumentViewer(docId = key.scanId, imageUri = key.imageUri))
+                    },
                 )
             }
 
             entry<DocumentViewer> { key ->
                 DocumentViewerScreen(
-                    docId  = key.docId,
-                    onBack = { backStack.removeLastOrNull() },
+                    docId    = key.docId,
+                    imageUri = key.imageUri,
+                    onBack   = { backStack.removeLastOrNull() },
+                    onEdit   = { backStack.add(DocumentEdit(docId = key.docId, imageUri = key.imageUri)) },
                 )
+            }
+
+            entry<DocumentEdit> { key ->
+                DocumentEditScreen(
+                    docId         = key.docId,
+                    imageUri      = key.imageUri,
+                    onBack        = { backStack.removeLastOrNull() },
+                    onExtractText = { backStack.add(TextEdit(imageUri = key.imageUri)) },
+                )
+            }
+
+            entry<TextEdit> { key ->
+                TextEditScreen(
+                    imageUri = key.imageUri,
+                    onBack   = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<Convert> {
+                ConvertScreen(onBack = { backStack.removeLastOrNull() })
             }
 
             entry<AppSettings> {
                 SettingsScreen(
-                    onBack            = { backStack.removeLastOrNull() },
-                    onViewOnboarding  = { backStack.add(Onboarding) },
+                    onBack           = { backStack.removeLastOrNull() },
+                    onViewOnboarding = { backStack.add(Onboarding) },
                 )
             }
         }

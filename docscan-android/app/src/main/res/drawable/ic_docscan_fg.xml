@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Document shadow/depth layer -->
+    <path
+        android:fillColor="#22818CF8"
+        android:pathData="M 35,27 C 30.6,27 27,30.6 27,35 L 27,80 C 27,84.4 30.6,88 35,88 L 73,88 C 77.4,88 81,84.4 81,80 L 81,47 L 61,27 Z" />
+
+    <!-- Document white body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 34,24 C 29.6,24 26,27.6 26,32 L 26,77 C 26,81.4 29.6,85 34,85 L 72,85 C 76.4,85 80,81.4 80,77 L 80,44 L 60,24 Z" />
+
+    <!-- Dog-ear fold (darker white / light grey) -->
+    <path
+        android:fillColor="#E1E1E6"
+        android:pathData="M 60,24 L 60,44 L 80,44 Z" />
+
+    <!-- Fold crease line -->
+    <path
+        android:strokeColor="#C8C8D0"
+        android:strokeWidth="1"
+        android:pathData="M 60,24 L 80,44" />
+
+    <!-- Text lines — top short line (title) -->
+    <path
+        android:strokeColor="#818CF8"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M 34,39 L 52,39" />
+
+    <!-- Text lines — body rows -->
+    <path
+        android:strokeColor="#C7C7D4"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 34,49 L 70,49 M 34,56 L 65,56 M 34,63 L 70,63 M 34,70 L 58,70" />
+
+    <!-- AI Scan glow beam (wide, very transparent) -->
+    <path
+        android:strokeColor="#26818CF8"
+        android:strokeWidth="14"
+        android:strokeLineCap="round"
+        android:pathData="M 20,54 L 88,54" />
+
+    <!-- AI Scan line (sharp, vibrant indigo) -->
+    <path
+        android:strokeColor="#818CF8"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M 20,54 L 88,54" />
+
+    <!-- Corner scan bracket — top-left -->
+    <path
+        android:strokeColor="#A78BFA"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 20,45 L 20,40 L 25,40" />
+
+    <!-- Corner scan bracket — top-right -->
+    <path
+        android:strokeColor="#A78BFA"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 83,40 L 88,40 L 88,45" />
+
+    <!-- Corner scan bracket — bottom-left -->
+    <path
+        android:strokeColor="#A78BFA"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 20,63 L 20,68 L 25,68" />
+
+    <!-- Corner scan bracket — bottom-right -->
+    <path
+        android:strokeColor="#A78BFA"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 83,68 L 88,68 L 88,63" />
+
+    <!-- AI sparkle star — top right of canvas -->
+    <path
+        android:fillColor="#C084FC"
+        android:pathData="M 85,19 C 85,21.8 82.8,24 80,24 C 82.8,24 85,26.2 85,29 C 85,26.2 87.2,24 90,24 C 87.2,24 85,21.8 85,19 Z" />
+
+    <!-- AI sparkle star — bottom left (smaller) -->
+    <path
+        android:fillColor="#818CF8"
+        android:pathData="M 19,78 C 19,79.7 17.7,81 16,81 C 17.7,81 19,82.3 19,84 C 19,82.3 20.3,81 22,81 C 20.3,81 19,79.7 19,78 Z" />
+
+</vector>

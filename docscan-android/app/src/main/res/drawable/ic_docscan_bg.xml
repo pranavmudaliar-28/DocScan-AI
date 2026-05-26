@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Solid dark navy background (matches app background #050C1C) -->
+    <path
+        android:fillColor="#050C1C"
+        android:pathData="M0,0h108v108h-108z" />
+
+    <!-- Radial glow — indigo tint centred slightly top-right -->
+    <path
+        android:pathData="M 54,46 m -46,0 a 46,46 0 1,1 92,0 a 46,46 0 1,1 -92,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="62"
+                android:centerY="42"
+                android:gradientRadius="52"
+                android:type="radial">
+                <item android:color="#28254580" android:offset="0.0" />
+                <item android:color="#00050C1C" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Secondary glow — purple tint bottom-left -->
+    <path
+        android:pathData="M 22,70 m -28,0 a 28,28 0 1,1 56,0 a 28,28 0 1,1 -56,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="22"
+                android:centerY="72"
+                android:gradientRadius="30"
+                android:type="radial">
+                <item android:color="#1A3B0764" android:offset="0.0" />
+                <item android:color="#00050C1C" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 @Serializable data object Main : NavKey
 @Serializable data object CameraScan : NavKey
 @Serializable data object GalleryImport : NavKey
-@Serializable data class ScanResult(val scanId: String = "scan_001") : NavKey
-@Serializable data class DocumentViewer(val docId: String = "doc_001") : NavKey
+@Serializable data class ScanResult(val scanId: String = "scan_001", val imageUri: String = "") : NavKey
+@Serializable data class DocumentViewer(val docId: String = "doc_001", val imageUri: String = "") : NavKey
+@Serializable data class DocumentEdit(val docId: String = "", val imageUri: String = "") : NavKey
+@Serializable data class TextEdit(val imageUri: String = "") : NavKey
+@Serializable data object Convert : NavKey
 @Serializable data object AppSettings : NavKey

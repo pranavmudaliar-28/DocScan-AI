@@ -100,4 +100,18 @@ dependencies {
   implementation(libs.room.runtime)
   ksp(libs.room.compiler)
   implementation(libs.room.ktx)
+
+  // CameraX
+  implementation(libs.camerax.camera2)
+  implementation(libs.camerax.lifecycle)
+  implementation(libs.camerax.view)
+
+  // Coil (image loading)
+  implementation(libs.coil.compose)
+
+  // Print support
+  implementation(libs.androidx.print)
+
+  // ML Kit — on-device OCR (bundled, no internet required)
+  implementation(libs.mlkit.text.recognition)
 }

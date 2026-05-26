@@ -18,7 +18,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -43,21 +42,22 @@ private val pages = listOf(
 
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
-    val pagerState   = rememberPagerState(pageCount = { pages.size })
-    val scope        = rememberCoroutineScope()
-    val isLast       = pagerState.currentPage == pages.lastIndex
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val scope      = rememberCoroutineScope()
+    val isLast     = pagerState.currentPage == pages.lastIndex
 
-    Box(
+    // Column-based layout: pager takes all available space, controls pin to bottom
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
     ) {
         HorizontalPager(
-            state = pagerState,
+            state    = pagerState,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 200.dp)
+                .fillMaxWidth()
+                .weight(1f)
         ) { pageIndex ->
             PageContent(page = pages[pageIndex], pageIndex = pageIndex)
         }
@@ -65,7 +65,6 @@ fun OnboardingScreen(onFinish: () -> Unit) {
         // Bottom controls
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -129,46 +128,52 @@ fun OnboardingScreen(onFinish: () -> Unit) {
 
 @Composable
 private fun PageContent(page: OnboardingPage, pageIndex: Int) {
-    Column(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
     ) {
-        // Illustration
-        Box(
-            modifier = Modifier.size(220.dp),
-            contentAlignment = Alignment.Center
+        // Illustration scales between 180dp and 260dp based on available width
+        val ilSize = (maxWidth * 0.55f).coerceIn(180.dp, 260.dp)
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            when (pageIndex) {
-                0 -> ScanIllustration()
-                1 -> AiIllustration()
-                else -> ExportIllustration()
+            Box(
+                modifier         = Modifier.size(ilSize),
+                contentAlignment = Alignment.Center
+            ) {
+                when (pageIndex) {
+                    0    -> ScanIllustration()
+                    1    -> AiIllustration()
+                    else -> ExportIllustration()
+                }
             }
+
+            Spacer(Modifier.height(48.dp))
+
+            Text(
+                text      = page.title,
+                style     = MaterialTheme.typography.headlineSmall,
+                color     = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text      = page.description,
+                style     = MaterialTheme.typography.bodyMedium,
+                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
-
-        Spacer(Modifier.height(52.dp))
-
-        Text(
-            text      = page.title,
-            style     = MaterialTheme.typography.headlineSmall,
-            color     = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            text      = page.description,
-            style     = MaterialTheme.typography.bodyMedium,
-            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 
-// ── Illustrations ─────────────────────────────────────────────────────────────
+// ── Illustrations — Canvas fills whatever size it is given ────────────────────
 
 @Composable
 private fun ScanIllustration() {
@@ -188,33 +193,28 @@ private fun ScanIllustration() {
         label = "glow"
     )
 
-    Canvas(modifier = Modifier.size(220.dp)) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val dw = size.width * 0.52f; val dh = size.height * 0.70f
         val dl = (size.width - dw) / 2f; val dt = (size.height - dh) / 2f
         val cr = CornerRadius(14.dp.toPx())
 
-        // Glow ring
         drawRoundRect(primary.copy(alpha = 0.10f * glow),
             Offset(dl - 10.dp.toPx(), dt - 10.dp.toPx()),
             Size(dw + 20.dp.toPx(), dh + 20.dp.toPx()), CornerRadius(22.dp.toPx()))
 
-        // Document
         drawRoundRect(surface, Offset(dl, dt), Size(dw, dh), cr)
         drawRoundRect(outline.copy(alpha = 0.6f), Offset(dl, dt), Size(dw, dh), cr, style = Stroke(2.dp.toPx()))
 
-        // Text lines
         val lx1 = dl + 10.dp.toPx(); val lx2 = dl + dw - 10.dp.toPx()
         val lc  = primary.copy(alpha = 0.30f); val lw = 2.5f.dp.toPx()
         drawLine(lc, Offset(lx1, dt + dh * .30f), Offset(lx2,               dt + dh * .30f), lw, StrokeCap.Round)
         drawLine(lc, Offset(lx1, dt + dh * .44f), Offset(lx2 - 14.dp.toPx(), dt + dh * .44f), lw, StrokeCap.Round)
         drawLine(lc, Offset(lx1, dt + dh * .58f), Offset(lx2 - 22.dp.toPx(), dt + dh * .58f), lw, StrokeCap.Round)
 
-        // Scan line
         val sy = dt + dh * scanY
         val fe = if (scanY < .08f) scanY / .08f else if (scanY > .92f) (1f - scanY) / .08f else 1f
         drawLine(primary.copy(alpha = fe * glow), Offset(dl + 2.dp.toPx(), sy), Offset(dl + dw - 2.dp.toPx(), sy), 2.dp.toPx(), StrokeCap.Round)
 
-        // Corner markers
         val m = 9.dp.toPx(); val ms = 3.5f.dp.toPx()
         val mx = dl - 7.dp.toPx(); val my = dt - 7.dp.toPx()
         val mw = dw + 14.dp.toPx(); val mh = dh + 14.dp.toPx()
@@ -234,7 +234,6 @@ private fun ScanIllustration() {
 private fun AiIllustration() {
     val primary   = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
-    val surface   = MaterialTheme.colorScheme.surfaceContainerHigh
 
     val infiniteTransition = rememberInfiniteTransition(label = "ai")
     val pulse by infiniteTransition.animateFloat(
@@ -248,40 +247,35 @@ private fun AiIllustration() {
         label = "glow"
     )
 
-    Canvas(modifier = Modifier.size(220.dp)) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val cx = size.width / 2f; val cy = size.height / 2f
-        val r  = 30.dp.toPx()
-        val orbitR = 68.dp.toPx()
-        val nodeR  = 10.dp.toPx()
+        // Scale hub and orbit proportionally with canvas size
+        val r      = size.minDimension * 0.136f
+        val orbitR = size.minDimension * 0.309f
+        val nodeR  = size.minDimension * 0.045f
         val nodeCount = 6
 
-        // Outer pulse ring
-        drawCircle(primary.copy(alpha = (1f - pulse) * 0.3f), radius = orbitR + pulse * 40.dp.toPx(), center = Offset(cx, cy), style = Stroke(1.5.dp.toPx()))
+        drawCircle(primary.copy(alpha = (1f - pulse) * 0.3f), radius = orbitR + pulse * size.minDimension * 0.182f, center = Offset(cx, cy), style = Stroke(1.5.dp.toPx()))
 
-        // Orbit nodes + connecting lines
         for (i in 0 until nodeCount) {
             val angle = (i * 360.0 / nodeCount - 90.0) * Math.PI / 180.0
             val nx = cx + orbitR * cos(angle).toFloat()
             val ny = cy + orbitR * sin(angle).toFloat()
 
-            // Line from center to node
             drawLine(
                 Brush.linearGradient(listOf(primary.copy(alpha = .4f), secondary.copy(alpha = .15f)), Offset(cx, cy), Offset(nx, ny)),
                 Offset(cx, cy), Offset(nx, ny), 1.5.dp.toPx()
             )
 
-            // Node
             val activeFactor = if ((pulse * nodeCount).toInt() % nodeCount == i) glow else 0.4f
             drawCircle(secondary.copy(alpha = activeFactor), nodeR, Offset(nx, ny))
             drawCircle(secondary.copy(alpha = .2f * activeFactor), nodeR * 1.8f, Offset(nx, ny))
         }
 
-        // Centre hub
         drawCircle(Brush.radialGradient(listOf(primary, secondary), radius = r, center = Offset(cx, cy)), r, Offset(cx, cy))
         drawCircle(primary.copy(alpha = .25f * glow), r * 1.6f, Offset(cx, cy))
 
-        // AI text represented as 3 dots in centre
-        val dotSpacing = 6.dp.toPx(); val dotR = 2.5f.dp.toPx()
+        val dotSpacing = size.minDimension * 0.027f; val dotR = size.minDimension * 0.011f
         for (j in -1..1) {
             drawCircle(Color.White.copy(alpha = .9f), dotR, Offset(cx + j * dotSpacing, cy))
         }
@@ -307,41 +301,33 @@ private fun ExportIllustration() {
         label = "glow"
     )
 
-    Canvas(modifier = Modifier.size(220.dp)) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val dw = size.width * 0.48f; val dh = size.height * 0.62f
         val dl = (size.width - dw) / 2f; val dt = (size.height - dh) / 2f + 12.dp.toPx()
         val cr = CornerRadius(12.dp.toPx())
 
-        // Glow beneath
         drawRoundRect(tertiary.copy(alpha = .12f * glow),
             Offset(dl - 8.dp.toPx(), dt - 8.dp.toPx()), Size(dw + 16.dp.toPx(), dh + 16.dp.toPx()), CornerRadius(20.dp.toPx()))
 
-        // Document
         drawRoundRect(surface, Offset(dl, dt), Size(dw, dh), cr)
         drawRoundRect(outline.copy(alpha = .5f), Offset(dl, dt), Size(dw, dh), cr, style = Stroke(2.dp.toPx()))
 
-        // Lines in document
         val lx1 = dl + 10.dp.toPx(); val lx2 = dl + dw - 10.dp.toPx()
         val lc  = primary.copy(alpha = .25f); val lw = 2.dp.toPx()
         drawLine(lc, Offset(lx1, dt + dh * .30f), Offset(lx2,               dt + dh * .30f), lw, StrokeCap.Round)
         drawLine(lc, Offset(lx1, dt + dh * .44f), Offset(lx2 - 16.dp.toPx(), dt + dh * .44f), lw, StrokeCap.Round)
         drawLine(lc, Offset(lx1, dt + dh * .58f), Offset(lx2 - 24.dp.toPx(), dt + dh * .58f), lw, StrokeCap.Round)
 
-        // Check mark badge (bottom-right of doc)
         val bx = dl + dw - 4.dp.toPx(); val by = dt + dh - 4.dp.toPx()
         drawCircle(tertiary.copy(alpha = glow), 12.dp.toPx(), Offset(bx, by))
         val ck = 5.dp.toPx()
         drawLine(Color.White, Offset(bx - ck * .6f, by), Offset(bx - ck * .1f, by + ck * .5f), 2.dp.toPx(), StrokeCap.Round)
         drawLine(Color.White, Offset(bx - ck * .1f, by + ck * .5f), Offset(bx + ck * .6f, by - ck * .4f), 2.dp.toPx(), StrokeCap.Round)
 
-        // Arrow above doc (animated)
         val ax = size.width / 2f; val ay = dt - 20.dp.toPx() + arrowY
         val arrowLen = 18.dp.toPx(); val arrowW = 10.dp.toPx()
-        // Glow
         drawCircle(primary.copy(alpha = .15f * glow), 18.dp.toPx(), Offset(ax, ay))
-        // Vertical shaft
         drawLine(primary.copy(alpha = glow), Offset(ax, ay + arrowLen / 2f), Offset(ax, ay - arrowLen / 2f), 3.dp.toPx(), StrokeCap.Round)
-        // Arrowhead
         drawLine(primary.copy(alpha = glow), Offset(ax - arrowW / 2f, ay - arrowLen / 2f + arrowW / 2f), Offset(ax, ay - arrowLen / 2f), 3.dp.toPx(), StrokeCap.Round)
         drawLine(primary.copy(alpha = glow), Offset(ax + arrowW / 2f, ay - arrowLen / 2f + arrowW / 2f), Offset(ax, ay - arrowLen / 2f), 3.dp.toPx(), StrokeCap.Round)
     }

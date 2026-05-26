@@ -1,6 +1,13 @@
 package com.example.docscanai.ui.viewer
 
-import androidx.compose.foundation.Canvas
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -12,85 +19,105 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.graphicsLayer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.SubcomposeAsyncImage
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentViewerScreen(
     docId: String,
+    imageUri: String,
     onBack: () -> Unit,
+    onEdit: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     var scale by remember { mutableFloatStateOf(1f) }
-    val clampedScale = scale.coerceIn(0.5f, 3f)
-
-    val primary = MaterialTheme.colorScheme.primary
-    val surface = MaterialTheme.colorScheme.surfaceContainerHigh
-    val outline = MaterialTheme.colorScheme.outline
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
+    val clampedScale = scale.coerceIn(0.5f, 4f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Pinch-to-zoom document
+        // Zoomable + pannable image area
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 80.dp, bottom = 100.dp)
+                .padding(top = 72.dp, bottom = 100.dp)
+                .clip(RectangleShape)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 3f)
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.5f, 4f)
+                        offsetX += pan.x
+                        offsetY += pan.y
+                        if (scale <= 1.05f) { offsetX = 0f; offsetY = 0f }
                     }
                 },
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.82f)
-                    .aspectRatio(0.74f)
-                    .scale(clampedScale)
-                    .clip(MaterialTheme.shapes.large)
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawRoundRect(surface, cornerRadius = CornerRadius(14.dp.toPx()))
-                    drawRoundRect(outline.copy(alpha = .35f), cornerRadius = CornerRadius(14.dp.toPx()), style = Stroke(1.5.dp.toPx()))
-
-                    val pad = 22.dp.toPx()
-                    val lc  = primary.copy(alpha = .20f)
-                    val lw  = 2.dp.toPx()
-
-                    // Header bar
-                    drawRoundRect(primary.copy(alpha = .12f), Offset(pad, pad), Size(size.width - pad * 2, 24.dp.toPx()), CornerRadius(5.dp.toPx()))
-                    drawRoundRect(primary.copy(alpha = .08f), Offset(pad, pad + 34.dp.toPx()), Size(size.width * .4f, 14.dp.toPx()), CornerRadius(3.dp.toPx()))
-
-                    // Divider
-                    drawLine(outline.copy(alpha = .3f), Offset(pad, size.height * .15f), Offset(size.width - pad, size.height * .15f), 1.dp.toPx())
-                    drawRoundRect(primary.copy(alpha = .08f), Offset(pad, size.height * .17f), Size(size.width * .25f, 10.dp.toPx()), CornerRadius(3.dp.toPx()))
-
-                    // Content rows
-                    val rows = listOf(.22f, .28f, .34f, .40f, .46f, .52f, .58f, .64f, .70f)
-                    rows.forEachIndexed { i, y ->
-                        val w = when (i % 4) { 0 -> 1.0f; 1 -> 0.88f; 2 -> 0.95f; else -> 0.72f }
-                        drawLine(lc, Offset(pad, size.height * y), Offset(pad + (size.width - pad * 2) * w, size.height * y), lw, StrokeCap.Round)
+            if (imageUri.isNotEmpty()) {
+                SubcomposeAsyncImage(
+                    model = imageUri,
+                    contentDescription = "Scanned document",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .graphicsLayer(
+                            scaleX       = clampedScale,
+                            scaleY       = clampedScale,
+                            translationX = offsetX,
+                            translationY = offsetY,
+                        ),
+                    loading = {
+                        Box(
+                            modifier = Modifier.size(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    },
+                    error = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.BrokenImage, null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Could not load image",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-
-                    // Divider + total row
-                    drawLine(outline.copy(alpha = .25f), Offset(pad, size.height * .76f), Offset(size.width - pad, size.height * .76f), 1.dp.toPx())
-                    drawRoundRect(primary.copy(alpha = .14f), Offset(pad, size.height * .80f), Size(size.width - pad * 2, 18.dp.toPx()), CornerRadius(5.dp.toPx()))
-                    drawRoundRect(primary.copy(alpha = .22f), Offset(size.width * .60f, size.height * .80f), Size(size.width * .32f, 18.dp.toPx()), CornerRadius(5.dp.toPx()))
-
-                    // Footer
-                    drawLine(lc, Offset(pad, size.height * .91f), Offset(size.width - pad, size.height * .91f), lw, StrokeCap.Round)
-                }
+                )
+            } else {
+                Text(
+                    "No image available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -100,7 +127,10 @@ fun DocumentViewerScreen(
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background.copy(alpha = 0f)),
+                        listOf(
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background.copy(alpha = 0f)
+                        ),
                         endY = 200f
                     )
                 )
@@ -121,8 +151,12 @@ fun DocumentViewerScreen(
                     Text("1 of 1 page", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row {
-                    IconButton(onClick = {}) { Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.onBackground) }
-                    IconButton(onClick = {}) { Icon(Icons.Default.Edit,  "Edit",  tint = MaterialTheme.colorScheme.onBackground) }
+                    IconButton(onClick = { shareImage(context, imageUri) }) {
+                        Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.onBackground)
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.onBackground)
+                    }
                 }
             }
         }
@@ -134,8 +168,12 @@ fun DocumentViewerScreen(
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
-                        listOf(MaterialTheme.colorScheme.background.copy(alpha = 0f), MaterialTheme.colorScheme.background),
-                        startY = 0f, endY = 160f
+                        listOf(
+                            MaterialTheme.colorScheme.background.copy(alpha = 0f),
+                            MaterialTheme.colorScheme.background
+                        ),
+                        startY = 0f,
+                        endY = 160f
                     )
                 )
                 .navigationBarsPadding()
@@ -148,12 +186,14 @@ fun DocumentViewerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Zoom controls
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ViewerIconBtn(onClick = { scale = (scale - 0.25f).coerceAtLeast(0.5f) }) {
+                    ViewerIconBtn(onClick = {
+                        scale = (scale - 0.25f).coerceAtLeast(0.5f)
+                        if (scale <= 1.05f) { offsetX = 0f; offsetY = 0f }
+                    }) {
                         Icon(Icons.Default.ZoomOut, "Out", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     }
                     Text(
@@ -163,27 +203,91 @@ fun DocumentViewerScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(46.dp)
                     )
-                    ViewerIconBtn(onClick = { scale = (scale + 0.25f).coerceAtMost(3f) }) {
+                    ViewerIconBtn(onClick = { scale = (scale + 0.25f).coerceAtMost(4f) }) {
                         Icon(Icons.Default.ZoomIn, "In", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     }
                 }
 
-                if (abs(clampedScale - 1f) > 0.05f) {
-                    TextButton(onClick = { scale = 1f }) {
+                if (abs(clampedScale - 1f) > 0.05f || abs(offsetX) > 5f || abs(offsetY) > 5f) {
+                    TextButton(onClick = { scale = 1f; offsetX = 0f; offsetY = 0f }) {
                         Text("Reset", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ViewerIconBtn(onClick = {}) {
+                    ViewerIconBtn(onClick = { downloadImage(context, imageUri) }) {
                         Icon(Icons.Default.FileDownload, "Download", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
-                    ViewerIconBtn(onClick = {}) {
+                    ViewerIconBtn(onClick = { printImage(context, imageUri) }) {
                         Icon(Icons.Default.Print, "Print", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     }
                 }
             }
         }
+    }
+}
+
+private fun shareImage(context: Context, imageUri: String) {
+    if (imageUri.isEmpty()) {
+        Toast.makeText(context, "No image to share", Toast.LENGTH_SHORT).show()
+        return
+    }
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/*"
+        putExtra(Intent.EXTRA_STREAM, Uri.parse(imageUri))
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share document"))
+}
+
+private fun downloadImage(context: Context, imageUri: String) {
+    if (imageUri.isEmpty()) {
+        Toast.makeText(context, "No image to save", Toast.LENGTH_SHORT).show()
+        return
+    }
+    try {
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "DocScan_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/DocScan AI")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        val resolver = context.contentResolver
+        val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("Insert failed")
+        resolver.openInputStream(Uri.parse(imageUri))?.use { input ->
+            resolver.openOutputStream(destUri)?.use { output ->
+                input.copyTo(output)
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(destUri, values, null, null)
+        }
+        Toast.makeText(context, "Saved to Pictures/DocScan AI", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Save failed", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun printImage(context: Context, imageUri: String) {
+    if (imageUri.isEmpty()) {
+        Toast.makeText(context, "No image to print", Toast.LENGTH_SHORT).show()
+        return
+    }
+    try {
+        val bitmap = android.graphics.BitmapFactory.decodeStream(
+            context.contentResolver.openInputStream(Uri.parse(imageUri))
+        ) ?: throw Exception("Could not decode image")
+        val printHelper = androidx.print.PrintHelper(context).apply {
+            scaleMode = androidx.print.PrintHelper.SCALE_MODE_FIT
+        }
+        printHelper.printBitmap("DocScan AI - Document", bitmap)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Print not available", Toast.LENGTH_SHORT).show()
     }
 }
 

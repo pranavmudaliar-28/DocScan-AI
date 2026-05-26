@@ -4,8 +4,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -26,13 +28,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.docscanai.data.DefaultDataRepository
+import com.example.docscanai.data.ScanRecord
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
 
 @Composable
 fun MainScreen(
     onScan: () -> Unit,
     onGallery: () -> Unit,
     onSettings: () -> Unit,
-    onScanItem: (String) -> Unit,
+    onConvert: () -> Unit,
+    onScanItem: (ScanRecord) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
 ) {
@@ -46,24 +55,28 @@ fun MainScreen(
         onScan      = onScan,
         onGallery   = onGallery,
         onSettings  = onSettings,
+        onConvert   = onConvert,
         onScanItem  = onScanItem,
     )
 }
 
 @Composable
 internal fun HomeScreen(
-    recentScans: List<String>,
+    recentScans: List<ScanRecord>,
     onScan: () -> Unit = {},
     onGallery: () -> Unit = {},
     onSettings: () -> Unit = {},
-    onScanItem: (String) -> Unit = {},
+    onConvert: () -> Unit = {},
+    onScanItem: (ScanRecord) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val primary   = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Ambient gradient orbs
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        val isWide  = maxWidth > 600.dp
+        val sidePad = if (isWide) ((maxWidth - 600.dp) / 2).coerceAtLeast(0.dp) else 0.dp
+
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
                 brush  = Brush.radialGradient(
@@ -88,6 +101,7 @@ internal fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(horizontal = sidePad)
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
@@ -102,7 +116,7 @@ internal fun HomeScreen(
             }
             item {
                 Spacer(Modifier.height(20.dp))
-                QuickActionsRow(onGallery = onGallery)
+                QuickActionsRow(onGallery = onGallery, onConvert = onConvert)
             }
             item {
                 Spacer(Modifier.height(28.dp))
@@ -153,48 +167,54 @@ private fun AppHeader(onSettings: () -> Unit) {
 
 @Composable
 private fun ScanCta(onScan: () -> Unit) {
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .height(210.dp)
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
+    ) {
+        val ctaHeight = (maxWidth * 0.46f).coerceIn(160.dp, 220.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ctaHeight)
+                .clip(MaterialTheme.shapes.extraLarge)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+                            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
+                        )
                     )
                 )
-            )
-            .clickable(onClick = onScan),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape    = MaterialTheme.shapes.extraLarge,
-            color    = Color.Transparent,
-            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-        ) {}
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                .clickable(onClick = onScan),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape    = MaterialTheme.shapes.extraLarge,
+                color    = Color.Transparent,
+                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+            ) {}
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                            ),
+                            CircleShape
                         ),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.CameraAlt, "Scan", tint = Color.White, modifier = Modifier.size(36.dp))
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CameraAlt, "Scan", tint = Color.White, modifier = Modifier.size(36.dp))
+                }
+                Spacer(Modifier.height(16.dp))
+                Text("Tap to Scan Document", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                Spacer(Modifier.height(4.dp))
+                Text("Camera · Auto-detect · AI extraction", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(16.dp))
-            Text("Tap to Scan Document", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-            Spacer(Modifier.height(4.dp))
-            Text("Camera · Auto-detect · AI extraction", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -204,7 +224,8 @@ private fun FeaturePills() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp)
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         listOf("OCR Text", "AI Summary", "PDF Export", "Multi-page").forEach { label ->
@@ -225,7 +246,7 @@ private fun FeaturePills() {
 }
 
 @Composable
-private fun QuickActionsRow(onGallery: () -> Unit) {
+private fun QuickActionsRow(onGallery: () -> Unit, onConvert: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -240,11 +261,11 @@ private fun QuickActionsRow(onGallery: () -> Unit) {
             onClick  = onGallery
         )
         QuickActionCard(
-            icon     = Icons.Default.Description,
-            label    = "PDF",
-            subtitle = "Open file",
+            icon     = Icons.Default.CompareArrows,
+            label    = "Convert",
+            subtitle = "Change format",
             modifier = Modifier.weight(1f),
-            onClick  = onGallery
+            onClick  = onConvert
         )
     }
 }
@@ -258,12 +279,12 @@ private fun QuickActionCard(
     onClick: () -> Unit = {},
 ) {
     Surface(
-        modifier = modifier.height(100.dp),
+        modifier = modifier,
         shape    = MaterialTheme.shapes.large,
         color    = MaterialTheme.colorScheme.surfaceContainerHigh,
         border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Box(modifier = Modifier.fillMaxSize().clickable(onClick = onClick).padding(16.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp)) {
             Column {
                 Box(
                     modifier = Modifier
@@ -286,8 +307,8 @@ private fun QuickActionCard(
 
 @Composable
 private fun RecentScansSection(
-    scans: List<String>,
-    onScanItem: (String) -> Unit,
+    scans: List<ScanRecord>,
+    onScanItem: (ScanRecord) -> Unit,
     onScan: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
@@ -298,7 +319,7 @@ private fun RecentScansSection(
         ) {
             Text("Recent Scans", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
             if (scans.isNotEmpty()) {
-                Text("See all", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("${scans.size} scans", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -306,12 +327,15 @@ private fun RecentScansSection(
 
         if (scans.isEmpty()) {
             Surface(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier.fillMaxWidth(),
                 shape    = MaterialTheme.shapes.large,
                 color    = MaterialTheme.colorScheme.surfaceContainerLow,
                 border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier         = Modifier.padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("No scans yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(2.dp))
@@ -326,8 +350,8 @@ private fun RecentScansSection(
                 }
             }
         } else {
-            scans.forEach { scan ->
-                ScanItem(name = scan, onClick = { onScanItem(scan) })
+            scans.forEach { record ->
+                ScanItem(record = record, onClick = { onScanItem(record) })
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -335,7 +359,7 @@ private fun RecentScansSection(
 }
 
 @Composable
-private fun ScanItem(name: String, onClick: () -> Unit) {
+private fun ScanItem(record: ScanRecord, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape    = MaterialTheme.shapes.medium,
@@ -359,8 +383,12 @@ private fun ScanItem(name: String, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                Text("Tap to open", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                Text(record.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                Text(
+                    dateFormat.format(Date(record.timestamp)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         }
     }

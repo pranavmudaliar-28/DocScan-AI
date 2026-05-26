@@ -3,6 +3,7 @@ package com.example.docscanai.ui.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.docscanai.data.DataRepository
+import com.example.docscanai.data.ScanRecord
 import com.example.docscanai.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -11,17 +12,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 class MainScreenViewModel(dataRepository: DataRepository) : ViewModel() {
-  val uiState: StateFlow<MainScreenUiState> =
-    dataRepository.data
-      .map<List<String>, MainScreenUiState>(::Success)
-      .catch { emit(MainScreenUiState.Error(it)) }
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
+    val uiState: StateFlow<MainScreenUiState> =
+        dataRepository.data
+            .map<List<ScanRecord>, MainScreenUiState>(::Success)
+            .catch { emit(MainScreenUiState.Error(it)) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
 }
 
 sealed interface MainScreenUiState {
-  object Loading : MainScreenUiState
-
-  data class Error(val throwable: Throwable) : MainScreenUiState
-
-  data class Success(val data: List<String>) : MainScreenUiState
+    object Loading : MainScreenUiState
+    data class Error(val throwable: Throwable) : MainScreenUiState
+    data class Success(val data: List<ScanRecord>) : MainScreenUiState
 }

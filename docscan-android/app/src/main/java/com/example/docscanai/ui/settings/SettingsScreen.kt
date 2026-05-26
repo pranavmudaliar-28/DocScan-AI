@@ -16,8 +16,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.docscanai.data.AppThemeRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,10 +28,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onViewOnboarding: () -> Unit,
 ) {
+    val context = LocalContext.current
     var highQuality   by remember { mutableStateOf(true) }
     var autoDetect    by remember { mutableStateOf(true) }
     var saveMetadata  by remember { mutableStateOf(false) }
-    var darkMode      by remember { mutableStateOf(true) }
+    val darkMode      by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()
     var notifications by remember { mutableStateOf(true) }
 
     Scaffold(
@@ -47,10 +51,13 @@ fun SettingsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // Center content on tablets; match phone padding on small screens
+            val sidePad = if (maxWidth > 600.dp) ((maxWidth - 600.dp) / 2).coerceAtLeast(0.dp) else 0.dp
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(horizontal = sidePad)
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
@@ -122,7 +129,7 @@ fun SettingsScreen(
                         label    = "Dark Mode",
                         subtitle = "Use dark theme throughout the app",
                         checked  = darkMode,
-                        onCheckedChange = { darkMode = it }
+                        onCheckedChange = { AppThemeRepository.setDarkTheme(context, it) }
                     )
                     SettingsDivider()
                     SettingsToggleRow(
@@ -199,7 +206,8 @@ fun SettingsScreen(
                     }
                 }
             }
-        }
+        } // LazyColumn
+        } // BoxWithConstraints
     }
 }
 
