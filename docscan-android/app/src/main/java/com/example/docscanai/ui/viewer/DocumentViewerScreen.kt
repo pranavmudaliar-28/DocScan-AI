@@ -3,7 +3,7 @@ package com.example.docscanai.ui.viewer
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -13,22 +13,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.graphicsLayer
+import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun DocumentViewerScreen(
@@ -72,12 +74,8 @@ fun DocumentViewerScreen(
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
                         .wrapContentHeight()
-                        .graphicsLayer(
-                            scaleX       = clampedScale,
-                            scaleY       = clampedScale,
-                            translationX = offsetX,
-                            translationY = offsetY,
-                        ),
+                        .scale(clampedScale)
+                        .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) },
                     loading = {
                         Box(
                             modifier = Modifier.size(200.dp),
@@ -144,7 +142,7 @@ fun DocumentViewerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(docId, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
@@ -234,7 +232,7 @@ private fun shareImage(context: Context, imageUri: String) {
     }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/*"
-        putExtra(Intent.EXTRA_STREAM, Uri.parse(imageUri))
+        putExtra(Intent.EXTRA_STREAM, imageUri.toUri())
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, "Share document"))
@@ -257,7 +255,7 @@ private fun downloadImage(context: Context, imageUri: String) {
         val resolver = context.contentResolver
         val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             ?: throw Exception("Insert failed")
-        resolver.openInputStream(Uri.parse(imageUri))?.use { input ->
+        resolver.openInputStream(imageUri.toUri())?.use { input ->
             resolver.openOutputStream(destUri)?.use { output ->
                 input.copyTo(output)
             }
@@ -268,7 +266,7 @@ private fun downloadImage(context: Context, imageUri: String) {
             resolver.update(destUri, values, null, null)
         }
         Toast.makeText(context, "Saved to Pictures/DocScan AI", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, "Save failed", Toast.LENGTH_SHORT).show()
     }
 }
@@ -280,13 +278,13 @@ private fun printImage(context: Context, imageUri: String) {
     }
     try {
         val bitmap = android.graphics.BitmapFactory.decodeStream(
-            context.contentResolver.openInputStream(Uri.parse(imageUri))
+            context.contentResolver.openInputStream(imageUri.toUri())
         ) ?: throw Exception("Could not decode image")
         val printHelper = androidx.print.PrintHelper(context).apply {
             scaleMode = androidx.print.PrintHelper.SCALE_MODE_FIT
         }
         printHelper.printBitmap("DocScan AI - Document", bitmap)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, "Print not available", Toast.LENGTH_SHORT).show()
     }
 }

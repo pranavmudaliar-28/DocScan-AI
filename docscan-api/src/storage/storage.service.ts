@@ -52,6 +52,19 @@ export class StorageService {
     }
   }
 
+  async getFileBuffer(key: string): Promise<Buffer | null> {
+    try {
+      const command = new GetObjectCommand({ Bucket: this.bucketName, Key: key });
+      const response = await this.s3Client.send(command);
+      if (response.Body) {
+        return Buffer.from(await response.Body.transformToByteArray());
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   async deleteFile(key: string): Promise<void> {
     try {
       const command = new DeleteObjectCommand({

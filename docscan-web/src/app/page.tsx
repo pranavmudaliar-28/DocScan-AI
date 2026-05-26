@@ -6,9 +6,9 @@ import { useSocket } from '@/components/providers/SocketProvider';
 import { UploadModal } from '@/components/UploadModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   FileText, LogOut, Sparkles, UploadCloud, FileCheck, FileMinus, FileSearch,
-  MoreVertical, Download, Edit2, Trash2, ArrowUpDown
+  MoreVertical, Download, Edit2, Trash2, ArrowUpDown, PenLine
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
@@ -428,6 +428,16 @@ export default function Home() {
                   <span className="w-0.5 h-0.5 rounded-full bg-zinc-400 dark:bg-zinc-600"></span>
                   <span>{new Date(doc.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </p>
+
+                {doc.status === 'COMPLETED' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); window.location.href = `/editor/${doc._id}`; }}
+                    className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2 px-3 rounded-lg border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors mb-3"
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                    Open in Editor
+                  </button>
+                )}
 
                 {doc.aiMetadata && doc.aiMetadata.extractedData ? (
                   <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/80">

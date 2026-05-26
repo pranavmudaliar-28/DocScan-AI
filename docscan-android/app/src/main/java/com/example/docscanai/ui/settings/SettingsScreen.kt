@@ -21,12 +21,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.docscanai.data.AppThemeRepository
+import com.example.docscanai.data.AuthRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onViewOnboarding: () -> Unit,
+    onSignOut: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var highQuality   by remember { mutableStateOf(true) }
@@ -194,7 +196,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                     OutlinedButton(
-                        onClick  = {},
+                        onClick  = onSignOut,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape    = MaterialTheme.shapes.large,
                         border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
@@ -212,7 +214,10 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun ProfileCard() {
+private fun ProfileCard(
+    name: String = AuthRepository.getName(),
+    email: String = AuthRepository.getEmail(),
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -242,7 +247,7 @@ private fun ProfileCard() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "DS",
+                    name.take(2).uppercase().ifBlank { "DS" },
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center
@@ -250,12 +255,12 @@ private fun ProfileCard() {
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "DocScan User",
+                    name.ifBlank { "DocScan User" },
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "user@docscanai.com",
+                    email.ifBlank { "guest@docscanai.com" },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

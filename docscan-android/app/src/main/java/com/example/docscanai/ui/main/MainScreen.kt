@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
@@ -261,7 +262,7 @@ private fun QuickActionsRow(onGallery: () -> Unit, onConvert: () -> Unit) {
             onClick  = onGallery
         )
         QuickActionCard(
-            icon     = Icons.Default.CompareArrows,
+            icon     = Icons.AutoMirrored.Filled.CompareArrows,
             label    = "Convert",
             subtitle = "Change format",
             modifier = Modifier.weight(1f),

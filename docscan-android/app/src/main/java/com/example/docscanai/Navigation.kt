@@ -5,6 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.example.docscanai.data.AuthRepository
+import com.example.docscanai.ui.auth.LoginScreen
+import com.example.docscanai.ui.auth.SignupScreen
 import com.example.docscanai.ui.camera.CameraScanScreen
 import com.example.docscanai.ui.gallery.GalleryImportScreen
 import com.example.docscanai.ui.main.MainScreen
@@ -28,14 +31,35 @@ fun MainNavigation() {
 
             entry<Splash> {
                 SplashScreen(onSplashComplete = {
-                    backStack[backStack.lastIndex] = Main
+                    // Route based on first-launch and auth state
+                    val dest = when {
+                        !AuthRepository.hasSeenOnboarding() -> Onboarding
+                        !AuthRepository.hasToken()          -> Login
+                        else                                -> Main
+                    }
+                    backStack[backStack.lastIndex] = dest
                 })
             }
 
             entry<Onboarding> {
                 OnboardingScreen(onFinish = {
-                    backStack.removeLastOrNull()
+                    AuthRepository.markOnboardingShown()
+                    backStack[backStack.lastIndex] = Login
                 })
+            }
+
+            entry<Login> {
+                LoginScreen(
+                    onLoginSuccess = { backStack[backStack.lastIndex] = Main },
+                    onSignUp       = { backStack.add(Signup) },
+                )
+            }
+
+            entry<Signup> {
+                SignupScreen(
+                    onSignUpSuccess = { backStack.removeLastOrNull() }, // back to Login
+                    onBack          = { backStack.removeLastOrNull() },
+                )
             }
 
             entry<Main> {
@@ -76,9 +100,7 @@ fun MainNavigation() {
                             )
                         )
                     },
-                    onCamera = {
-                        backStack[backStack.lastIndex] = CameraScan
-                    },
+                    onCamera = { backStack[backStack.lastIndex] = CameraScan },
                 )
             }
 
@@ -126,6 +148,12 @@ fun MainNavigation() {
                 SettingsScreen(
                     onBack           = { backStack.removeLastOrNull() },
                     onViewOnboarding = { backStack.add(Onboarding) },
+                    onSignOut        = {
+                        AuthRepository.signOut()
+                        // Clear entire back stack down to one entry, replace with Login
+                        repeat(backStack.size - 1) { backStack.removeLastOrNull() }
+                        backStack[0] = Login
+                    },
                 )
             }
         }
