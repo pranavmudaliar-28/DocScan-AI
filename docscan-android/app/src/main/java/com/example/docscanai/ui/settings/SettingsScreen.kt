@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,11 +18,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.docscanai.data.AppThemeRepository
 import com.example.docscanai.data.AuthRepository
+import com.example.docscanai.ui.theme.AIGlow
+import com.example.docscanai.ui.theme.DeepNavy
+import com.example.docscanai.ui.theme.IntelligentBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,11 +38,18 @@ fun SettingsScreen(
     onSignOut: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var highQuality   by remember { mutableStateOf(true) }
-    var autoDetect    by remember { mutableStateOf(true) }
-    var saveMetadata  by remember { mutableStateOf(false) }
-    val darkMode      by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()
-    var notifications by remember { mutableStateOf(true) }
+    var highQuality      by remember { mutableStateOf(true) }
+    var autoDetect       by remember { mutableStateOf(true) }
+    var saveMetadata     by remember { mutableStateOf(false) }
+    val darkMode         by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()
+    var notifications    by remember { mutableStateOf(true) }
+    // AI & OCR
+    var aiSuggestions    by remember { mutableStateOf(true) }
+    var autoCleanup      by remember { mutableStateOf(true) }
+    var smartTagging     by remember { mutableStateOf(true) }
+    // Cloud & Sync
+    var autoSync         by remember { mutableStateOf(true) }
+    var wifiOnlySync     by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -118,6 +132,70 @@ fun SettingsScreen(
                         icon     = Icons.Default.PictureAsPdf,
                         label    = "PDF Compression",
                         subtitle = "Balanced",
+                        onClick  = {}
+                    )
+                }
+            }
+
+            // AI & OCR
+            item {
+                SettingsSection(title = "AI & OCR") {
+                    SettingsToggleRow(
+                        icon     = Icons.Default.AutoAwesome,
+                        label    = "AI Suggestions",
+                        subtitle = "Smart field detection and document categorisation",
+                        checked  = aiSuggestions,
+                        onCheckedChange = { aiSuggestions = it }
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        icon     = Icons.Default.AutoFixHigh,
+                        label    = "Auto-Cleanup OCR",
+                        subtitle = "Fix common OCR errors automatically after scanning",
+                        checked  = autoCleanup,
+                        onCheckedChange = { autoCleanup = it }
+                    )
+                    SettingsDivider()
+                    SettingsNavRow(
+                        icon     = Icons.Default.Language,
+                        label    = "OCR Language",
+                        subtitle = "English",
+                        onClick  = {}
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        icon     = Icons.Default.Label,
+                        label    = "Smart Tagging",
+                        subtitle = "Automatically tag documents by content type",
+                        checked  = smartTagging,
+                        onCheckedChange = { smartTagging = it }
+                    )
+                }
+            }
+
+            // Cloud & Sync
+            item {
+                SettingsSection(title = "Cloud & Sync") {
+                    SettingsToggleRow(
+                        icon     = Icons.Default.CloudSync,
+                        label    = "Auto-Sync",
+                        subtitle = "Upload scans to Supabase storage automatically",
+                        checked  = autoSync,
+                        onCheckedChange = { autoSync = it }
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        icon     = Icons.Default.Wifi,
+                        label    = "Wi-Fi Only",
+                        subtitle = "Only sync when connected to Wi-Fi",
+                        checked  = wifiOnlySync,
+                        onCheckedChange = { wifiOnlySync = it }
+                    )
+                    SettingsDivider()
+                    SettingsNavRow(
+                        icon     = Icons.Default.Storage,
+                        label    = "Storage Used",
+                        subtitle = "Tap to view usage details",
                         onClick  = {}
                     )
                 }
@@ -215,60 +293,91 @@ fun SettingsScreen(
 
 @Composable
 private fun ProfileCard(
-    name: String = AuthRepository.getName(),
+    name: String  = AuthRepository.getName(),
     email: String = AuthRepository.getEmail(),
 ) {
-    Surface(
+    val initials = name.split(" ").take(2)
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .joinToString("")
+        .ifBlank { "DS" }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        shape    = MaterialTheme.shapes.large,
-        color    = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(Brush.linearGradient(listOf(DeepNavy, IntelligentBlue))),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            modifier              = Modifier.padding(16.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // Avatar
+            // Avatar circle
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.secondary
-                            )
-                        ),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    name.take(2).uppercase().ifBlank { "DS" },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
+                    initials,
+                    style     = MaterialTheme.typography.titleMedium,
+                    color     = Color.White,
+                    textAlign = TextAlign.Center,
                 )
             }
+
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    name.ifBlank { "DocScan User" },
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        name.ifBlank { "DocScan User" },
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                    )
+                    // Pro badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Row(
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                null,
+                                tint     = AIGlow,
+                                modifier = Modifier.size(10.dp),
+                            )
+                            Text(
+                                "PRO",
+                                fontSize      = 9.sp,
+                                fontWeight    = FontWeight.Bold,
+                                color         = Color.White,
+                                fontFamily    = FontFamily.Monospace,
+                                letterSpacing = 0.5.sp,
+                            )
+                        }
+                    }
+                }
                 Text(
                     email.ifBlank { "guest@docscanai.com" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.70f),
                 )
             }
+
             Icon(
-                Icons.Default.ChevronRight, null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                Icons.Default.ChevronRight,
+                null,
+                tint     = Color.White.copy(alpha = 0.60f),
+                modifier = Modifier.size(20.dp),
             )
         }
     }

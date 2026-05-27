@@ -8,9 +8,11 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +21,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
@@ -159,8 +165,8 @@ fun DocumentViewerScreen(
             }
         }
 
-        // Bottom controls
-        Box(
+        // Bottom controls + AI summary
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
@@ -171,12 +177,56 @@ fun DocumentViewerScreen(
                             MaterialTheme.colorScheme.background
                         ),
                         startY = 0f,
-                        endY = 160f
+                        endY = 200f
                     )
                 )
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            // AI Summary card
+            var showAiCard by remember { mutableStateOf(true) }
+            if (showAiCard) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    color    = Color(0xFF1A3060).copy(alpha = 0.92f),
+                    border   = BorderStroke(1.dp, Color(0xFF60A5FA).copy(alpha = 0.25f)),
+                ) {
+                    Row(
+                        modifier              = Modifier.padding(12.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, null,
+                            tint     = Color(0xFF60A5FA),
+                            modifier = Modifier.size(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "AI SUMMARY",
+                                fontSize      = 9.sp,
+                                color         = Color(0xFF60A5FA),
+                                fontFamily    = FontFamily.Monospace,
+                                fontWeight    = FontWeight.SemiBold,
+                                letterSpacing = 1.sp,
+                            )
+                            Text(
+                                "Scanned document — tap Edit to extract and review text",
+                                fontSize = 12.sp,
+                                color    = Color.White.copy(alpha = 0.75f),
+                            )
+                        }
+                        IconButton(onClick = { showAiCard = false }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, "Dismiss",
+                                tint     = Color.White.copy(alpha = 0.50f),
+                                modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

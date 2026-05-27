@@ -16,3 +16,5 @@ import kotlinx.serialization.Serializable
 @Serializable data class TextEdit(val imageUri: String = "") : NavKey
 @Serializable data object Convert : NavKey
 @Serializable data object AppSettings : NavKey
+@Serializable data object Search : NavKey
+@Serializable data object PasswordReset : NavKey

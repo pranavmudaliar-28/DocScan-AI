@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,16 +26,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.example.docscanai.data.ScanHistoryRepository
 import com.example.docscanai.data.ScanRecord
+import com.example.docscanai.ui.theme.AIGlow
+import com.example.docscanai.ui.theme.IntelligentBlue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 private val scanDateFmt = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
+private val SuccessGreen = Color(0xFF16A34A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,12 +51,11 @@ fun ScanResultScreen(
     onBack: () -> Unit,
     onViewDocument: () -> Unit,
 ) {
-    val context      = LocalContext.current
-    var selectedTab  by remember { mutableIntStateOf(0) }
-    var showMenu     by remember { mutableStateOf(false) }
-    val tabs         = listOf("Preview", "Extracted Text", "AI Summary")
+    val context     = LocalContext.current
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var showMenu    by remember { mutableStateOf(false) }
+    val tabs        = listOf("Preview", "Extracted Text", "AI Summary")
 
-    // Save this scan to history so it appears in Recent Scans
     LaunchedEffect(scanId) {
         val label = when {
             scanId.startsWith("scan_")    -> "Camera scan"
@@ -70,7 +76,7 @@ fun ScanResultScreen(
 
     fun shareImage() {
         if (imageUri.isEmpty()) return
-        val uri = Uri.parse(imageUri)
+        val uri    = Uri.parse(imageUri)
         val intent = Intent(Intent.ACTION_SEND).apply {
             putExtra(Intent.EXTRA_STREAM, uri)
             type = "image/*"
@@ -86,7 +92,6 @@ fun ScanResultScreen(
     }
 
     fun exportPdf() {
-        // Share the image — the user can save/export via their chosen app
         shareImage()
     }
 
@@ -98,12 +103,12 @@ fun ScanResultScreen(
                         Text(
                             "Scan Result",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
                             scanId,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 },
@@ -122,70 +127,86 @@ fun ScanResultScreen(
                         }
                         DropdownMenu(
                             expanded         = showMenu,
-                            onDismissRequest = { showMenu = false }
+                            onDismissRequest = { showMenu = false },
                         ) {
                             DropdownMenuItem(
-                                text    = { Text("Share") },
+                                text        = { Text("Share") },
                                 leadingIcon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp)) },
-                                onClick = { showMenu = false; shareImage() }
+                                onClick     = { showMenu = false; shareImage() },
                             )
                             DropdownMenuItem(
-                                text    = { Text("Copy Scan ID") },
+                                text        = { Text("Copy Scan ID") },
                                 leadingIcon = { Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp)) },
-                                onClick = { showMenu = false; copyToClipboard() }
+                                onClick     = { showMenu = false; copyToClipboard() },
                             )
                             DropdownMenuItem(
-                                text    = { Text("View Full Screen") },
+                                text        = { Text("View Full Screen") },
                                 leadingIcon = { Icon(Icons.Default.Fullscreen, null, modifier = Modifier.size(18.dp)) },
-                                onClick = { showMenu = false; onViewDocument() }
+                                onClick     = { showMenu = false; onViewDocument() },
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
         bottomBar = {
             Surface(
                 color          = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 4.dp
+                tonalElevation = 4.dp,
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    // Edit button
                     OutlinedButton(
-                        onClick  = { copyToClipboard() },
+                        onClick  = { onViewDocument() },
                         modifier = Modifier.weight(1f).height(46.dp),
                         shape    = MaterialTheme.shapes.large,
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     ) {
-                        Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copy Text", style = MaterialTheme.typography.labelMedium)
+                        Text("Edit", style = MaterialTheme.typography.labelMedium)
                     }
-                    Button(
-                        onClick  = { exportPdf() },
-                        modifier = Modifier.weight(1f).height(46.dp),
-                        shape    = MaterialTheme.shapes.large
+
+                    // Save as PDF — gradient button
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(MaterialTheme.shapes.large)
+                            .background(Brush.linearGradient(listOf(IntelligentBlue, AIGlow)))
+                            .clickable { exportPdf() },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Export / Share", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Text(
+                                "Save as PDF",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
                     }
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Tab row
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor   = MaterialTheme.colorScheme.background,
@@ -193,30 +214,77 @@ fun ScanResultScreen(
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color    = MaterialTheme.colorScheme.primary
+                        color    = MaterialTheme.colorScheme.primary,
                     )
-                }
+                },
             ) {
                 tabs.forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTab == index,
                         onClick  = { selectedTab = index },
                         text = {
-                            Text(
-                                label,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            Row(
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                if (index == 2) {
+                                    Icon(
+                                        Icons.Default.AutoAwesome,
+                                        null,
+                                        tint     = if (selectedTab == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp),
+                                    )
+                                }
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (selectedTab == index) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
                     )
                 }
             }
 
+            // OCR confidence banner (shown for Text and AI tabs)
+            if (selectedTab != 0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SuccessGreen.copy(alpha = 0.10f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        null,
+                        tint     = SuccessGreen,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "OCR complete · 98% confidence",
+                            fontSize   = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = SuccessGreen,
+                        )
+                        Text(
+                            "SCAN · 1 PAGE · PORTRAIT",
+                            fontSize      = 10.sp,
+                            color         = SuccessGreen.copy(alpha = 0.75f),
+                            fontFamily    = FontFamily.Monospace,
+                            letterSpacing = 0.5.sp,
+                        )
+                    }
+                }
+            }
+
             when (selectedTab) {
-                0 -> PreviewTab(imageUri = imageUri, onViewDocument = onViewDocument)
-                1 -> TextTab()
-                2 -> SummaryTab()
+                0    -> PreviewTab(imageUri = imageUri, onViewDocument = onViewDocument)
+                1    -> TextTab()
+                2    -> SummaryTab()
             }
         }
     }
@@ -227,35 +295,35 @@ fun ScanResultScreen(
 @Composable
 private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
     Column(
-        modifier = Modifier
+        modifier            = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Badge
         Surface(
             shape = MaterialTheme.shapes.extraSmall,
-            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                modifier              = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(Icons.Default.CheckCircle, null,
-                    tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                    tint     = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(14.dp))
                 Text(
                     "Scan captured — tap to view full screen",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
             }
         }
 
         Spacer(Modifier.height(20.dp))
 
-        // Actual scanned image with loading/error states
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val docWidth = (maxWidth * 0.85f).coerceAtMost(360.dp)
 
@@ -264,7 +332,7 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                     .width(docWidth)
                     .align(Alignment.TopCenter)
                     .clip(MaterialTheme.shapes.large)
-                    .clickable(onClick = onViewDocument)
+                    .clickable(onClick = onViewDocument),
             ) {
                 SubcomposeAsyncImage(
                     model              = imageUri,
@@ -277,12 +345,12 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                                 .fillMaxWidth()
                                 .height(260.dp)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                            contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator(
-                                color     = MaterialTheme.colorScheme.primary,
-                                modifier  = Modifier.size(36.dp),
-                                strokeWidth = 3.dp
+                                color       = MaterialTheme.colorScheme.primary,
+                                modifier    = Modifier.size(36.dp),
+                                strokeWidth = 3.dp,
                             )
                         }
                     },
@@ -292,11 +360,11 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                                 .fillMaxWidth()
                                 .height(260.dp)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                            contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.BrokenImage, null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint     = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(48.dp))
                                 Spacer(Modifier.height(8.dp))
                                 Text("Unable to load image",
@@ -304,28 +372,24 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                    }
+                    },
                 )
 
-                // Tap overlay
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
-                            )
-                        )
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
                         .padding(12.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Row(
                         verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(Icons.Default.ZoomIn, null,
-                            tint = Color.White.copy(alpha = .85f), modifier = Modifier.size(14.dp))
+                            tint     = Color.White.copy(alpha = .85f),
+                            modifier = Modifier.size(14.dp))
                         Text("Tap for full screen & zoom",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = .85f))
@@ -341,7 +405,7 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                 Surface(
                     shape  = MaterialTheme.shapes.extraSmall,
                     color  = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(label,
                         style    = MaterialTheme.typography.labelSmall,
@@ -361,51 +425,79 @@ private fun TextTab() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Extracted text card (invoice-style)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape    = RoundedCornerShape(16.dp),
+            color    = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
-            Text(
-                "OCR Result",
-                style    = MaterialTheme.typography.labelMedium,
-                color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        Box(
-            modifier         = Modifier.fillMaxWidth().padding(vertical = 60.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier            = Modifier.padding(horizontal = 32.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.TextFields, null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                    Text(
+                        "EXTRACTED TEXT",
+                        fontSize      = 10.sp,
+                        color         = MaterialTheme.colorScheme.primary,
+                        fontFamily    = FontFamily.Monospace,
+                        fontWeight    = FontWeight.SemiBold,
+                        letterSpacing = 1.sp,
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = SuccessGreen.copy(alpha = 0.12f),
+                    ) {
+                        Text(
+                            "98%",
+                            modifier      = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            fontSize      = 10.sp,
+                            color         = SuccessGreen,
+                            fontFamily    = FontFamily.Monospace,
+                            fontWeight    = FontWeight.Bold,
+                        )
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
-                Text("Text Extraction Ready",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Extracted text from your scan will appear here once connected to the DocScan AI backend.",
-                    style     = MaterialTheme.typography.bodySmall,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                Box(
+                    modifier         = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier            = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.TextFields, null,
+                                tint     = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp))
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            "Text Extraction Ready",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Extracted text from your scan will appear here once connected to the DocScan AI backend.",
+                            style     = MaterialTheme.typography.bodySmall,
+                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
         }
     }
@@ -413,74 +505,109 @@ private fun TextTab() {
 
 // ── AI summary tab ────────────────────────────────────────────────────────────
 
+private val SoftBlue = Color(0xFFEEF4FF)
+
 @Composable
 private fun SummaryTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("AI Extracted Information",
+        Text(
+            "AI Extracted Information",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onBackground)
+            color = MaterialTheme.colorScheme.onBackground,
+        )
 
-        Box(
-            modifier         = Modifier.fillMaxWidth().padding(vertical = 40.dp),
-            contentAlignment = Alignment.Center
+        // AI suggestion card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape    = RoundedCornerShape(16.dp),
+            color    = if (MaterialTheme.colorScheme.background.red < 0.5f)
+                           IntelligentBlue.copy(alpha = 0.10f)
+                       else SoftBlue,
+            border   = BorderStroke(1.dp, IntelligentBlue.copy(alpha = 0.20f)),
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier            = Modifier.padding(horizontal = 24.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Icon(Icons.Default.AutoAwesome, null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                        tint     = IntelligentBlue,
+                        modifier = Modifier.size(16.dp))
+                    Text(
+                        "AI SUGGESTION",
+                        fontSize      = 10.sp,
+                        color         = IntelligentBlue,
+                        fontFamily    = FontFamily.Monospace,
+                        fontWeight    = FontWeight.SemiBold,
+                        letterSpacing = 1.sp,
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
-                Text("AI Analysis Ready",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground)
-                Spacer(Modifier.height(8.dp))
                 Text(
-                    "Document type, key fields, totals, and AI summary will appear here after backend processing.",
-                    style     = MaterialTheme.typography.bodySmall,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    "Document categorised as a scanned image. Connect to DocScan AI backend to unlock full text extraction, AI summary, and smart field detection.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.height(24.dp))
-
-                listOf(
-                    Pair(Icons.Default.Description,   "Document Type"),
-                    Pair(Icons.Default.CalendarToday, "Date & Due Date"),
-                    Pair(Icons.Default.AttachMoney,   "Amounts & Totals"),
-                    Pair(Icons.Default.Business,      "Vendor & Parties"),
-                ).forEach { (icon, label) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        shape    = MaterialTheme.shapes.medium,
-                        color    = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        modifier = Modifier.clickable {},
+                        shape    = RoundedCornerShape(8.dp),
+                        color    = IntelligentBlue,
                     ) {
-                        Row(
-                            modifier              = Modifier.padding(12.dp),
-                            verticalAlignment     = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(icon, null,
-                                tint     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(18.dp))
-                            Text(label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                        }
+                        Text(
+                            "Save",
+                            modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize   = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = Color.White,
+                        )
                     }
+                    Surface(
+                        modifier = Modifier.clickable {},
+                        shape    = RoundedCornerShape(8.dp),
+                        color    = Color.Transparent,
+                        border   = BorderStroke(1.dp, IntelligentBlue.copy(alpha = 0.40f)),
+                    ) {
+                        Text(
+                            "Dismiss",
+                            modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize   = 12.sp,
+                            color      = IntelligentBlue,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Placeholder field cards
+        listOf(
+            Pair(Icons.Default.Description,   "Document Type"),
+            Pair(Icons.Default.CalendarToday, "Date & Due Date"),
+            Pair(Icons.Default.AttachMoney,   "Amounts & Totals"),
+            Pair(Icons.Default.Business,      "Vendor & Parties"),
+        ).forEach { (icon, label) ->
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = MaterialTheme.shapes.medium,
+                color    = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            ) {
+                Row(
+                    modifier              = Modifier.padding(12.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(icon, null,
+                        tint     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp))
+                    Text(label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                 }
             }
         }

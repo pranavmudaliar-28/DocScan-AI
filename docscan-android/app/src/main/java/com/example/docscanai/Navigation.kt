@@ -7,7 +7,9 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.docscanai.data.AuthRepository
 import com.example.docscanai.ui.auth.LoginScreen
+import com.example.docscanai.ui.auth.PasswordResetScreen
 import com.example.docscanai.ui.auth.SignupScreen
+import com.example.docscanai.ui.search.SearchScreen
 import com.example.docscanai.ui.camera.CameraScanScreen
 import com.example.docscanai.ui.gallery.GalleryImportScreen
 import com.example.docscanai.ui.main.MainScreen
@@ -50,8 +52,9 @@ fun MainNavigation() {
 
             entry<Login> {
                 LoginScreen(
-                    onLoginSuccess = { backStack[backStack.lastIndex] = Main },
-                    onSignUp       = { backStack.add(Signup) },
+                    onLoginSuccess  = { backStack[backStack.lastIndex] = Main },
+                    onSignUp        = { backStack.add(Signup) },
+                    onForgotPassword = { backStack.add(PasswordReset) },
                 )
             }
 
@@ -68,6 +71,7 @@ fun MainNavigation() {
                     onGallery  = { backStack.add(GalleryImport) },
                     onSettings = { backStack.add(AppSettings) },
                     onConvert  = { backStack.add(Convert) },
+                    onSearch   = { backStack.add(Search) },
                     onScanItem = { record ->
                         backStack.add(DocumentViewer(docId = record.id, imageUri = record.imageUri))
                     },
@@ -142,6 +146,17 @@ fun MainNavigation() {
 
             entry<Convert> {
                 ConvertScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<Search> {
+                SearchScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<PasswordReset> {
+                PasswordResetScreen(
+                    onBack          = { backStack.removeLastOrNull() },
+                    onResetComplete = { backStack[backStack.lastIndex] = Login },
+                )
             }
 
             entry<AppSettings> {

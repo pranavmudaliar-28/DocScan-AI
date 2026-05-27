@@ -22,6 +22,8 @@ hiltNavigationCompose = "1.2.0"
 camerax = "1.4.1"
 coil = "2.7.0"
 mlkitTextRecognition = "16.0.0"
+supabase             = "2.6.1"
+ktor                 = "2.3.12"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -67,6 +69,12 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitTextRecognition" }
 
 androidx-print = { module = "androidx.print:print", version = "1.0.0" }
+
+supabase-bom        = { module = "io.github.jan-tennant:supabase-bom",  version.ref = "supabase" }
+supabase-auth       = { module = "io.github.jan-tennant:auth-kt" }
+supabase-postgrest  = { module = "io.github.jan-tennant:postgrest-kt" }
+supabase-storage    = { module = "io.github.jan-tennant:storage-kt" }
+ktor-client-android = { module = "io.ktor:ktor-client-android",         version.ref = "ktor" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

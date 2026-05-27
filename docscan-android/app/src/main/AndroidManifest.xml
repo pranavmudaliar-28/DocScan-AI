@@ -24,6 +24,7 @@
         android:roundIcon="@mipmap/ic_docscan_icon_round"
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.DocScanAI">
 
         <activity

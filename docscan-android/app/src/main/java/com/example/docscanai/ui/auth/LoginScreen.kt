@@ -1,8 +1,11 @@
 package com.example.docscanai.ui.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -12,17 +15,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.docscanai.data.AuthRepository
+import com.example.docscanai.ui.theme.AIGlow
+import com.example.docscanai.ui.theme.IntelligentBlue
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onSignUp: () -> Unit,
+    onForgotPassword: () -> Unit = {},
 ) {
     val scope    = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -59,152 +70,342 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0F2240))))
             .systemBarsPadding()
     ) {
+        // Particle dots
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            val dots = listOf(
+                Pair(0.15f, 0.06f), Pair(0.82f, 0.10f), Pair(0.38f, 0.16f),
+                Pair(0.70f, 0.04f), Pair(0.92f, 0.22f), Pair(0.06f, 0.32f),
+                Pair(0.55f, 0.88f), Pair(0.25f, 0.72f), Pair(0.78f, 0.68f),
+                Pair(0.44f, 0.92f), Pair(0.90f, 0.55f), Pair(0.12f, 0.50f),
+            )
+            dots.forEach { (x, y) ->
+                drawCircle(
+                    color  = AIGlow.copy(alpha = 0.22f),
+                    radius = 3.dp.toPx(),
+                    center = androidx.compose.ui.geometry.Offset(size.width * x, size.height * y),
+                )
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
-            Spacer(Modifier.height(56.dp))
+            Spacer(Modifier.height(52.dp))
 
-            // ── Branding ────────────────────────────────────────────────────────
+            // Logo box
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Description, null, tint = AIGlow, modifier = Modifier.size(30.dp))
+            }
+
+            Spacer(Modifier.height(20.dp))
+
             Text(
-                "DocScan AI",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary,
+                "Welcome back",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                letterSpacing = (-0.5).sp,
             )
             Text(
                 "Sign in to your account",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp, bottom = 44.dp),
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.65f),
+                modifier = Modifier.padding(top = 6.dp, bottom = 28.dp),
             )
 
-            // ── Email ────────────────────────────────────────────────────────────
-            OutlinedTextField(
-                value         = email,
-                onValueChange = { email = it; error = null },
-                label         = { Text("Email") },
-                leadingIcon   = { Icon(Icons.Default.Email, null) },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction    = ImeAction.Next,
-                ),
-                singleLine  = true,
-                isError     = error != null,
-                modifier    = Modifier.fillMaxWidth(),
-                colors      = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    focusedLabelColor  = MaterialTheme.colorScheme.primary,
-                ),
-            )
+            // Glass card
+            Surface(
+                shape  = RoundedCornerShape(24.dp),
+                color  = Color.White.copy(alpha = 0.06f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                shadowElevation = 0.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    // Email
+                    LoginDarkField(
+                        value         = email,
+                        onValueChange = { email = it; error = null },
+                        label         = "Email address",
+                        leadingIcon   = {
+                            Icon(Icons.Default.Email, null,
+                                tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction    = ImeAction.Next,
+                        ),
+                    )
+
+                    // Password
+                    LoginDarkField(
+                        value         = password,
+                        onValueChange = { password = it; error = null },
+                        label         = "Password",
+                        leadingIcon   = {
+                            Icon(Icons.Default.Lock, null,
+                                tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { showPassword = !showPassword }) {
+                                Icon(
+                                    if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showPassword) "Hide" else "Show",
+                                    tint = Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        },
+                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction    = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { doLogin() }),
+                    )
+
+                    // Forgot password link
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "Forgot password?",
+                            fontSize   = 13.sp,
+                            color      = AIGlow.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Medium,
+                            modifier   = Modifier.align(Alignment.CenterEnd).clickable(onClick = onForgotPassword),
+                        )
+                    }
+
+                    // Error banner
+                    if (error != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFDC2626).copy(alpha = 0.15f))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Icon(Icons.Default.ErrorOutline, null,
+                                tint = Color(0xFFF87171), modifier = Modifier.size(16.dp))
+                            Text(error!!, color = Color(0xFFF87171), fontSize = 13.sp)
+                        }
+                    }
+
+                    // Gradient sign-in button
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    if (isLoading)
+                                        listOf(IntelligentBlue.copy(alpha = 0.5f), AIGlow.copy(alpha = 0.5f))
+                                    else
+                                        listOf(IntelligentBlue, AIGlow)
+                                )
+                            )
+                            .clickable(enabled = !isLoading) { doLogin() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color       = Color.White,
+                            )
+                        } else {
+                            Text(
+                                "Sign In",
+                                fontSize   = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color      = Color.White,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // OR divider
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(
+                    modifier  = Modifier.weight(1f),
+                    color     = Color.White.copy(alpha = 0.20f),
+                )
+                Text(
+                    "  OR  ",
+                    fontSize = 12.sp,
+                    color    = Color.White.copy(alpha = 0.40f),
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color    = Color.White.copy(alpha = 0.20f),
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Password ─────────────────────────────────────────────────────────
-            OutlinedTextField(
-                value         = password,
-                onValueChange = { password = it; error = null },
-                label         = { Text("Password") },
-                leadingIcon   = { Icon(Icons.Default.Lock, null) },
-                trailingIcon  = {
-                    IconButton(onClick = { showPassword = !showPassword }) {
+            // Guest button
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !isLoading) { doGuest() },
+                shape  = RoundedCornerShape(14.dp),
+                color  = Color.White.copy(alpha = 0.04f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         Icon(
-                            if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (showPassword) "Hide" else "Show",
+                            Icons.Default.PersonOutline, null,
+                            tint     = Color.White.copy(alpha = 0.70f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            "Continue as Guest",
+                            fontSize   = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color      = Color.White.copy(alpha = 0.80f),
                         )
                     }
-                },
-                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction    = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { doLogin() }),
-                singleLine  = true,
-                isError     = error != null,
-                modifier    = Modifier.fillMaxWidth(),
-                colors      = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    focusedLabelColor  = MaterialTheme.colorScheme.primary,
-                ),
-            )
-
-            // ── Error message ────────────────────────────────────────────────────
-            if (error != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    error!!,
-                    color     = MaterialTheme.colorScheme.error,
-                    style     = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth(),
-                )
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            // ── Sign In button ───────────────────────────────────────────────────
-            Button(
-                onClick  = { doLogin() },
-                enabled  = !isLoading,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape    = MaterialTheme.shapes.large,
-                colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier    = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color       = MaterialTheme.colorScheme.onPrimary,
+                    Text(
+                        "Limited features · no account required",
+                        fontSize = 11.sp,
+                        color    = Color.White.copy(alpha = 0.40f),
                     )
-                } else {
-                    Text("Sign In", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // ── Continue as Guest ────────────────────────────────────────────────
-            OutlinedButton(
-                onClick  = { doGuest() },
-                enabled  = !isLoading,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape    = MaterialTheme.shapes.large,
-            ) {
-                Icon(Icons.Default.PersonOutline, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Continue as Guest", style = MaterialTheme.typography.labelLarge)
-            }
-
             Spacer(Modifier.height(28.dp))
 
-            // ── Sign Up link ─────────────────────────────────────────────────────
+            // Trust badges
             Row(
-                verticalAlignment    = Alignment.CenterVertically,
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                listOf("AES-256", "SOC 2", "GDPR").forEachIndexed { i, label ->
+                    if (i > 0) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp).height(12.dp)
+                                .background(Color.White.copy(alpha = 0.18f))
+                        )
+                    }
+                    Row(
+                        modifier              = Modifier.padding(horizontal = 10.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Shield, null,
+                            tint     = AIGlow.copy(alpha = 0.65f),
+                            modifier = Modifier.size(11.dp),
+                        )
+                        Text(
+                            label,
+                            fontSize      = 10.sp,
+                            color         = Color.White.copy(alpha = 0.45f),
+                            fontWeight    = FontWeight.Medium,
+                            letterSpacing = 0.3.sp,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Sign up link
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    "Don't have an account?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("New here?", fontSize = 14.sp, color = Color.White.copy(alpha = 0.55f))
                 TextButton(onClick = onSignUp) {
                     Text(
-                        "Sign Up",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelLarge,
+                        "Create an account",
+                        color      = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 14.sp,
                     )
                 }
             }
 
-            Spacer(Modifier.height(56.dp))
+            Spacer(Modifier.height(32.dp))
         }
+    }
+}
+
+// ── Reusable dark field ───────────────────────────────────────────────────────
+
+@Composable
+private fun LoginDarkField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            label.uppercase(),
+            fontSize      = 10.sp,
+            color         = Color.White.copy(alpha = 0.55f),
+            fontWeight    = FontWeight.Medium,
+            letterSpacing = 1.sp,
+            fontFamily    = FontFamily.Monospace,
+        )
+        OutlinedTextField(
+            value                = value,
+            onValueChange        = onValueChange,
+            leadingIcon          = leadingIcon,
+            trailingIcon         = trailingIcon,
+            visualTransformation = visualTransformation,
+            keyboardOptions      = keyboardOptions,
+            keyboardActions      = keyboardActions,
+            singleLine           = true,
+            modifier             = Modifier.fillMaxWidth().height(52.dp),
+            textStyle            = androidx.compose.ui.text.TextStyle(
+                color    = Color.White,
+                fontSize = 15.sp,
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
+                focusedContainerColor   = Color.White.copy(alpha = 0.08f),
+                unfocusedBorderColor    = Color.White.copy(alpha = 0.12f),
+                focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
+                cursorColor             = AIGlow,
+            ),
+            shape = RoundedCornerShape(12.dp),
+        )
     }
 }

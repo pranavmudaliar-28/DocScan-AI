@@ -8,37 +8,76 @@ plugins {
 }
 
 android {
-    namespace = "com.example.docscanai"
+    namespace  = "ai.docscan.app"
     compileSdk = 36
+
     defaultConfig {
-        applicationId = "com.example.docscanai"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        applicationId = "ai.docscan.app"
+        minSdk        = 24
+        targetSdk     = 36
+        versionCode   = 1
+        versionName   = "1.0.0"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+    // ── Signing ──────────────────────────────────────────────────────────────
+    signingConfigs {
+        create("release") {
+            val propsFile = rootProject.file("keystore.properties")
+            if (propsFile.exists()) {
+                val lines = propsFile.readLines()
+                fun prop(key: String) = lines
+                    .firstOrNull { it.startsWith("$key=") }
+                    ?.substringAfter("=")
+                    ?.trim()
+                storeFile     = prop("storeFile")?.let { file(it) }
+                storePassword = prop("storePassword")
+                keyAlias      = prop("keyAlias")
+                keyPassword   = prop("keyPassword")
+            }
         }
     }
+
+    // ── Build types ───────────────────────────────────────────────────────────
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix   = "-debug"
+        }
+        release {
+            isMinifyEnabled    = true
+            isShrinkResources  = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // ── Compile options ───────────────────────────────────────────────────────
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     buildFeatures {
-      compose = true
-      aidl = false
-      buildConfig = false
-      shaders = false
+        compose    = true
+        aidl       = false
+        buildConfig = false
+        shaders    = false
+    }
+
+    // ── AAB splits (Play Store optimises downloads per device) ─────────────────
+    bundle {
+        language { enableSplit = true }
+        density  { enableSplit = true }
+        abi      { enableSplit = true }
     }
 
     packaging {
-      resources {
-        excludes += "/META-INF/{AL2.0,LGPL2.1}"
-      }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -65,17 +104,13 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.extended)
-  // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
-  // Instrumented tests
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-  // Local tests: jUnit, coroutines, Android runner
+  // Tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
-
-  // Instrumented tests: jUnit rules and runners
   androidTestImplementation(libs.androidx.test.core)
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
@@ -112,6 +147,13 @@ dependencies {
   // Print support
   implementation(libs.androidx.print)
 
-  // ML Kit — on-device OCR (bundled, no internet required)
+  // ML Kit — on-device OCR
   implementation(libs.mlkit.text.recognition)
+
+  // Supabase Kotlin SDK (Auth, PostgREST, Storage)
+  implementation(platform(libs.supabase.bom))
+  implementation(libs.supabase.auth)
+  implementation(libs.supabase.postgrest)
+  implementation(libs.supabase.storage)
+  implementation(libs.ktor.client.android)
 }
