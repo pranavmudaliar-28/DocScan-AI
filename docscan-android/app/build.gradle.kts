@@ -150,10 +150,18 @@ dependencies {
   // ML Kit — on-device OCR
   implementation(libs.mlkit.text.recognition)
 
+  // Google Mobile Ads
+  implementation("com.google.android.gms:play-services-ads:23.0.0")
+
   // Supabase Kotlin SDK (Auth, PostgREST, Storage)
   implementation(platform(libs.supabase.bom))
   implementation(libs.supabase.auth)
   implementation(libs.supabase.postgrest)
   implementation(libs.supabase.storage)
   implementation(libs.ktor.client.android)
+
+  // Google Sign-In via Credential Manager
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services)
+  implementation(libs.googleid)
 }

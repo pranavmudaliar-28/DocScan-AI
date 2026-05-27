@@ -11,4 +11,10 @@ object SupabaseConfig {
 
     // Supabase Storage bucket name — create this bucket in your Supabase dashboard
     const val DOCUMENTS_BUCKET = "documents"
+
+    // OAuth 2.0 Web Client ID from Google Cloud Console (not the Android client ID).
+    // Required steps:
+    //   1. Google Cloud Console → APIs & Services → Credentials → Web Client
+    //   2. Supabase Dashboard → Auth → Providers → Google → enable + paste Client ID & Secret
+    const val GOOGLE_WEB_CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
 }

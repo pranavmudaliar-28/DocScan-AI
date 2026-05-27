@@ -94,9 +94,11 @@ internal fun HomeScreen(
 
     Scaffold(
         bottomBar = {
-            MainTabBar(
-                selectedTab = selectedTab,
-                onTabSelect = { tab ->
+            Column {
+                com.example.docscanai.ui.ads.AdMobBanner()
+                MainTabBar(
+                    selectedTab = selectedTab,
+                    onTabSelect = { tab ->
                     when (tab) {
                         0    -> selectedTab = 0
                         1    -> { selectedTab = 1; onGallery() }

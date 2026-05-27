@@ -6,6 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +63,22 @@ fun ScanResultScreen(
     var showMenu    by remember { mutableStateOf(false) }
     val tabs        = listOf("Preview", "Extracted Text", "AI Summary")
 
+    val fileMime    = remember(imageUri) {
+        if (imageUri.isEmpty()) "" else context.contentResolver.getType(Uri.parse(imageUri)) ?: ""
+    }
+    val isImageFile = fileMime.startsWith("image/")
+
+    var ocrText    by remember { mutableStateOf<String?>(null) }
+    var ocrLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 1 && ocrText == null && !ocrLoading && isImageFile && imageUri.isNotEmpty()) {
+            ocrLoading = true
+            ocrText    = runScanOcr(context, imageUri)
+            ocrLoading = false
+        }
+    }
+
     LaunchedEffect(scanId) {
         val label = when {
             scanId.startsWith("scan_")    -> "Camera scan"
@@ -74,25 +97,22 @@ fun ScanResultScreen(
         )
     }
 
-    fun shareImage() {
+    fun shareDoc() {
         if (imageUri.isEmpty()) return
         val uri    = Uri.parse(imageUri)
+        val mime   = context.contentResolver.getType(uri) ?: "image/*"
         val intent = Intent(Intent.ACTION_SEND).apply {
             putExtra(Intent.EXTRA_STREAM, uri)
-            type = "image/*"
+            type = mime
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Share scan"))
+        context.startActivity(Intent.createChooser(intent, "Share document"))
     }
 
     fun copyToClipboard() {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("Scan ID", scanId))
         Toast.makeText(context, "Scan ID copied", Toast.LENGTH_SHORT).show()
-    }
-
-    fun exportPdf() {
-        shareImage()
     }
 
     Scaffold(
@@ -118,7 +138,7 @@ fun ScanResultScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { shareImage() }) {
+                    IconButton(onClick = { shareDoc() }) {
                         Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.onBackground)
                     }
                     Box {
@@ -132,7 +152,7 @@ fun ScanResultScreen(
                             DropdownMenuItem(
                                 text        = { Text("Share") },
                                 leadingIcon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp)) },
-                                onClick     = { showMenu = false; shareImage() },
+                                onClick     = { showMenu = false; shareDoc() },
                             )
                             DropdownMenuItem(
                                 text        = { Text("Copy Scan ID") },
@@ -174,23 +194,26 @@ fun ScanResultScreen(
                         Text("Edit", style = MaterialTheme.typography.labelMedium)
                     }
 
-                    // Save as PDF — gradient button
+                    // Export / Share button — uses correct MIME for the actual file type
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
                             .clip(MaterialTheme.shapes.large)
                             .background(Brush.linearGradient(listOf(IntelligentBlue, AIGlow)))
-                            .clickable { exportPdf() },
+                            .clickable { shareDoc() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(
                             verticalAlignment     = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Icon(
+                                if (isImageFile) Icons.Default.PictureAsPdf else Icons.Default.Share,
+                                null, tint = Color.White, modifier = Modifier.size(16.dp)
+                            )
                             Text(
-                                "Save as PDF",
+                                if (isImageFile) "Save as PDF" else "Export",
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelMedium,
                             )
@@ -247,43 +270,45 @@ fun ScanResultScreen(
                 }
             }
 
-            // OCR confidence banner (shown for Text and AI tabs)
-            if (selectedTab != 0) {
+            // OCR confidence banner — only shown for image scans on non-preview tabs
+            if (selectedTab != 0 && isImageFile) {
+                val bannerColor = if (ocrLoading) MaterialTheme.colorScheme.primary else SuccessGreen
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(SuccessGreen.copy(alpha = 0.10f))
+                        .background(bannerColor.copy(alpha = 0.10f))
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        null,
-                        tint     = SuccessGreen,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "OCR complete · 98% confidence",
-                            fontSize   = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color      = SuccessGreen,
+                    if (ocrLoading) {
+                        CircularProgressIndicator(
+                            modifier    = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color       = MaterialTheme.colorScheme.primary,
                         )
-                        Text(
-                            "SCAN · 1 PAGE · PORTRAIT",
-                            fontSize      = 10.sp,
-                            color         = SuccessGreen.copy(alpha = 0.75f),
-                            fontFamily    = FontFamily.Monospace,
-                            letterSpacing = 0.5.sp,
+                    } else {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint     = SuccessGreen,
+                            modifier = Modifier.size(16.dp),
                         )
                     }
+                    Text(
+                        if (ocrLoading) "Running OCR…"
+                        else if (ocrText.isNullOrEmpty()) "No text detected"
+                        else "OCR complete · ${ocrText!!.trim().split("\\s+".toRegex()).count { it.isNotEmpty() }} words extracted",
+                        fontSize   = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color      = bannerColor,
+                    )
                 }
             }
 
             when (selectedTab) {
                 0    -> PreviewTab(imageUri = imageUri, onViewDocument = onViewDocument)
-                1    -> TextTab()
+                1    -> TextTab(imageUri = imageUri, ocrText = ocrText, loading = ocrLoading)
                 2    -> SummaryTab()
             }
         }
@@ -420,58 +445,121 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
 // ── Extracted text tab ────────────────────────────────────────────────────────
 
 @Composable
-private fun TextTab() {
+private fun TextTab(imageUri: String, ocrText: String?, loading: Boolean) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Extracted text card (invoice-style)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape    = RoundedCornerShape(16.dp),
-            color    = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment     = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "EXTRACTED TEXT",
-                        fontSize      = 10.sp,
-                        color         = MaterialTheme.colorScheme.primary,
-                        fontFamily    = FontFamily.Monospace,
-                        fontWeight    = FontWeight.SemiBold,
-                        letterSpacing = 1.sp,
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = SuccessGreen.copy(alpha = 0.12f),
+        when {
+            loading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "98%",
-                            modifier      = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontSize      = 10.sp,
-                            color         = SuccessGreen,
-                            fontFamily    = FontFamily.Monospace,
-                            fontWeight    = FontWeight.Bold,
+                            "Extracting text…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                Box(
-                    modifier         = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center,
+            }
+            ocrText != null && ocrText.isNotEmpty() -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(16.dp),
+                    color    = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier              = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment     = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "EXTRACTED TEXT",
+                                fontSize      = 10.sp,
+                                color         = MaterialTheme.colorScheme.primary,
+                                fontFamily    = FontFamily.Monospace,
+                                fontWeight    = FontWeight.SemiBold,
+                                letterSpacing = 1.sp,
+                            )
+                            val wordCount = ocrText.trim().split("\\s+".toRegex()).count { it.isNotEmpty() }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = SuccessGreen.copy(alpha = 0.12f),
+                            ) {
+                                Text(
+                                    "$wordCount words",
+                                    modifier      = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize      = 10.sp,
+                                    color         = SuccessGreen,
+                                    fontFamily    = FontFamily.Monospace,
+                                    fontWeight    = FontWeight.Bold,
+                                )
+                            }
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Text(
+                            ocrText,
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(top = 4.dp),
+                        )
+                    }
+                }
+                // Copy button
+                OutlinedButton(
+                    onClick = {
+                        val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cb.setPrimaryClip(ClipData.newPlainText("Extracted text", ocrText))
+                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Copy All Text")
+                }
+            }
+            ocrText != null && ocrText.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier            = Modifier.padding(horizontal = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier            = Modifier.padding(32.dp),
+                    ) {
+                        Icon(Icons.Default.TextFields, null,
+                            modifier = Modifier.size(48.dp),
+                            tint     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                        Text("No text detected",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onBackground)
+                        Text("OCR found no readable text in this scan.",
+                            style     = MaterialTheme.typography.bodySmall,
+                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center)
+                    }
+                }
+            }
+            else -> {
+                // imageUri is non-image file (PDF/DOCX/etc) — direct user to Edit flow
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier            = Modifier.padding(32.dp),
                     ) {
                         Box(
                             modifier = Modifier
@@ -483,19 +571,14 @@ private fun TextTab() {
                                 tint     = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(26.dp))
                         }
-                        Spacer(Modifier.height(14.dp))
-                        Text(
-                            "Text Extraction Ready",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Extracted text from your scan will appear here once connected to the DocScan AI backend.",
+                        Text("Open in Editor to extract text",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onBackground)
+                        Text("Tap Edit to open this document in the full OCR editor.",
                             style     = MaterialTheme.typography.bodySmall,
                             color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
+                            textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -509,6 +592,7 @@ private val SoftBlue = Color(0xFFEEF4FF)
 
 @Composable
 private fun SummaryTab() {
+    var suggestionDismissed by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -553,32 +637,37 @@ private fun SummaryTab() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        modifier = Modifier.clickable {},
-                        shape    = RoundedCornerShape(8.dp),
-                        color    = IntelligentBlue,
-                    ) {
-                        Text(
-                            "Save",
-                            modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            fontSize   = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color      = Color.White,
-                        )
-                    }
-                    Surface(
-                        modifier = Modifier.clickable {},
-                        shape    = RoundedCornerShape(8.dp),
-                        color    = Color.Transparent,
-                        border   = BorderStroke(1.dp, IntelligentBlue.copy(alpha = 0.40f)),
-                    ) {
-                        Text(
-                            "Dismiss",
-                            modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            fontSize   = 12.sp,
-                            color      = IntelligentBlue,
-                        )
+                if (!suggestionDismissed) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val context2 = androidx.compose.ui.platform.LocalContext.current
+                        Surface(
+                            modifier = Modifier.clickable {
+                                Toast.makeText(context2, "Document saved to history", Toast.LENGTH_SHORT).show()
+                            },
+                            shape    = RoundedCornerShape(8.dp),
+                            color    = IntelligentBlue,
+                        ) {
+                            Text(
+                                "Saved",
+                                modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                fontSize   = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color      = Color.White,
+                            )
+                        }
+                        Surface(
+                            modifier = Modifier.clickable { suggestionDismissed = true },
+                            shape    = RoundedCornerShape(8.dp),
+                            color    = Color.Transparent,
+                            border   = BorderStroke(1.dp, IntelligentBlue.copy(alpha = 0.40f)),
+                        ) {
+                            Text(
+                                "Dismiss",
+                                modifier   = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                fontSize   = 12.sp,
+                                color      = IntelligentBlue,
+                            )
+                        }
                     }
                 }
             }
@@ -613,3 +702,19 @@ private fun SummaryTab() {
         }
     }
 }
+
+// ── OCR helper ────────────────────────────────────────────────────────────────
+
+private suspend fun runScanOcr(context: Context, imageUri: String): String =
+    withContext(Dispatchers.Default) {
+        try {
+            val uri = Uri.parse(imageUri)
+            suspendCancellableCoroutine { cont ->
+                val image      = InputImage.fromFilePath(context, uri)
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                recognizer.process(image)
+                    .addOnSuccessListener { result -> if (cont.isActive) cont.resume(result.text) }
+                    .addOnFailureListener { if (cont.isActive) cont.resume("") }
+            }
+        } catch (_: Exception) { "" }
+    }

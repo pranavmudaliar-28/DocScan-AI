@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import android.app.Activity
+import com.example.docscanai.ui.ads.AdMobInterstitial
 
 @Composable
 fun DocumentViewerScreen(
@@ -155,7 +157,10 @@ fun DocumentViewerScreen(
                     Text("1 of 1 page", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row {
-                    IconButton(onClick = { shareImage(context, imageUri) }) {
+                    IconButton(onClick = { 
+                        shareImage(context, imageUri) 
+                        (context as? Activity)?.let { act -> AdMobInterstitial.showAd(act) {} }
+                    }) {
                         Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.onBackground)
                     }
                     IconButton(onClick = onEdit) {
@@ -263,10 +268,16 @@ fun DocumentViewerScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ViewerIconBtn(onClick = { downloadImage(context, imageUri) }) {
+                    ViewerIconBtn(onClick = { 
+                        downloadImage(context, imageUri) 
+                        (context as? Activity)?.let { act -> AdMobInterstitial.showAd(act) {} }
+                    }) {
                         Icon(Icons.Default.FileDownload, "Download", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
-                    ViewerIconBtn(onClick = { printImage(context, imageUri) }) {
+                    ViewerIconBtn(onClick = { 
+                        printImage(context, imageUri) 
+                        (context as? Activity)?.let { act -> AdMobInterstitial.showAd(act) {} }
+                    }) {
                         Icon(Icons.Default.Print, "Print", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     }
                 }
@@ -290,32 +301,73 @@ private fun shareImage(context: Context, imageUri: String) {
 
 private fun downloadImage(context: Context, imageUri: String) {
     if (imageUri.isEmpty()) {
-        Toast.makeText(context, "No image to save", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "No file to save", Toast.LENGTH_SHORT).show()
         return
     }
     try {
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "DocScan_${System.currentTimeMillis()}.jpg")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/DocScan AI")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-        }
         val resolver = context.contentResolver
-        val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            ?: throw Exception("Insert failed")
-        resolver.openInputStream(imageUri.toUri())?.use { input ->
-            resolver.openOutputStream(destUri)?.use { output ->
-                input.copyTo(output)
+        val mime     = resolver.getType(imageUri.toUri()) ?: "image/jpeg"
+        val isImage  = mime.startsWith("image/")
+        val ext      = when {
+            mime == "application/pdf"          -> "pdf"
+            mime.contains("wordprocessingml")
+                || mime == "application/msword" -> "docx"
+            mime == "text/plain"               -> "txt"
+            mime == "text/csv"
+                || mime.contains("excel")
+                || mime.contains("spreadsheet") -> "csv"
+            mime.startsWith("image/png")       -> "png"
+            else                               -> "jpg"
+        }
+        val fileName = "DocScan_${System.currentTimeMillis()}.$ext"
+
+        if (isImage) {
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Images.Media.MIME_TYPE, mime)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/DocScan AI")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
             }
+            val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw Exception("Insert failed")
+            resolver.openInputStream(imageUri.toUri())?.use { input ->
+                resolver.openOutputStream(destUri)?.use { output -> input.copyTo(output) }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(destUri, values, null, null)
+            }
+            Toast.makeText(context, "Saved to Pictures/DocScan AI", Toast.LENGTH_SHORT).show()
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, mime)
+                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/DocScan AI")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val destUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: throw Exception("Insert failed")
+                resolver.openInputStream(imageUri.toUri())?.use { input ->
+                    resolver.openOutputStream(destUri)?.use { output -> input.copyTo(output) }
+                }
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(destUri, values, null, null)
+            } else {
+                val dir = java.io.File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "DocScan AI"
+                ).also { it.mkdirs() }
+                resolver.openInputStream(imageUri.toUri())?.use { input ->
+                    java.io.File(dir, fileName).outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            Toast.makeText(context, "Saved to Downloads/DocScan AI", Toast.LENGTH_SHORT).show()
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            values.clear()
-            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            resolver.update(destUri, values, null, null)
-        }
-        Toast.makeText(context, "Saved to Pictures/DocScan AI", Toast.LENGTH_SHORT).show()
     } catch (_: Exception) {
         Toast.makeText(context, "Save failed", Toast.LENGTH_SHORT).show()
     }

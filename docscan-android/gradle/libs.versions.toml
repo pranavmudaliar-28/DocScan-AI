@@ -1,5 +1,5 @@
 [versions]
-androidGradlePlugin = "8.9.1"
+androidGradlePlugin = "8.13.2"
 androidxCore = "1.18.0"
 androidxLifecycle = "2.10.0"
 androidxActivity = "1.13.0"
@@ -24,6 +24,8 @@ coil = "2.7.0"
 mlkitTextRecognition = "16.0.0"
 supabase             = "2.6.1"
 ktor                 = "2.3.12"
+credentialsManager   = "1.3.0"
+googleid             = "1.1.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -75,6 +77,10 @@ supabase-auth       = { module = "io.github.jan-tennant:auth-kt" }
 supabase-postgrest  = { module = "io.github.jan-tennant:postgrest-kt" }
 supabase-storage    = { module = "io.github.jan-tennant:storage-kt" }
 ktor-client-android = { module = "io.ktor:ktor-client-android",         version.ref = "ktor" }
+
+androidx-credentials               = { module = "androidx.credentials:credentials",                    version.ref = "credentialsManager" }
+androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsManager" }
+googleid                           = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

@@ -70,11 +70,17 @@ private fun resolveDocType(context: Context, imageUri: String): DocType {
     return when {
         mime == null                                  -> DocType.UNKNOWN
         mime.startsWith("image/")                     -> DocType.IMAGE
-        mime == "application/pdf"                     -> DocType.DIGITAL_PDF  // refined inside PdfRouter
-        mime.contains("wordprocessingml")             -> DocType.DOCX
+        mime == "application/pdf"                     -> DocType.DIGITAL_PDF
+        mime.contains("wordprocessingml")
+            || mime == "application/msword"           -> DocType.DOCX
         mime == "text/plain"                          -> DocType.TXT
         mime == "text/csv"
-            || imageUri.endsWith(".csv", true)        -> DocType.CSV
+            || mime.contains("spreadsheet")
+            || mime.contains("excel")
+            || mime == "application/vnd.ms-excel"
+            || imageUri.endsWith(".csv", true)
+            || imageUri.endsWith(".xls", true)
+            || imageUri.endsWith(".xlsx", true)       -> DocType.CSV
         else                                          -> DocType.UNKNOWN
     }
 }

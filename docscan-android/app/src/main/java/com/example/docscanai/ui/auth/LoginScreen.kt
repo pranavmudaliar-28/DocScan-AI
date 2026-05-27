@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +38,7 @@ fun LoginScreen(
 ) {
     val scope    = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
+    val context  = LocalContext.current
 
     var email        by remember { mutableStateOf("") }
     var password     by remember { mutableStateOf("") }
@@ -63,6 +65,17 @@ fun LoginScreen(
             AuthRepository.guestLogin().fold(
                 onSuccess = { onLoginSuccess() },
                 onFailure = { e -> error = e.message ?: "Guest login failed"; isLoading = false },
+            )
+        }
+    }
+
+    fun doGoogleSignIn() {
+        keyboard?.hide()
+        error = null; isLoading = true
+        scope.launch {
+            AuthRepository.signInWithGoogle(context).fold(
+                onSuccess = { onLoginSuccess() },
+                onFailure = { e -> error = e.message ?: "Google sign-in failed"; isLoading = false },
             )
         }
     }
@@ -264,6 +277,15 @@ fun LoginScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            // Google Sign-In button
+            GoogleAuthButton(
+                label     = "Continue with Google",
+                enabled   = !isLoading,
+                onClick   = { doGoogleSignIn() },
+            )
+
+            Spacer(Modifier.height(10.dp))
+
             // Guest button
             Surface(
                 modifier = Modifier
@@ -358,6 +380,47 @@ fun LoginScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+// ── Google auth button (shared between Login / Signup) ────────────────────────
+
+@Composable
+internal fun GoogleAuthButton(
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() },
+        shape  = RoundedCornerShape(14.dp),
+        color  = Color.White.copy(alpha = if (enabled) 0.95f else 0.50f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
+    ) {
+        Row(
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 13.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment     = Alignment.CenterVertically,
+        ) {
+            // Google "G" in brand colours
+            Text(
+                text       = "G",
+                fontSize   = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color      = Color(0xFF4285F4),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text       = label,
+                fontSize   = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color      = Color(0xFF1F1F1F),
+            )
         }
     }
 }

@@ -52,6 +52,9 @@ fun SettingsScreen(
     var wifiOnlySync     by remember { mutableStateOf(false) }
 
     Scaffold(
+        bottomBar = {
+            com.example.docscanai.ui.ads.AdMobBanner()
+        },
         topBar = {
             TopAppBar(
                 title = {

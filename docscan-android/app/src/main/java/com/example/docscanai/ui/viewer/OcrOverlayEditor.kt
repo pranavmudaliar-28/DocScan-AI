@@ -187,7 +187,7 @@ fun OcrOverlayEditorScreen(
             onCleanup    = { runAutoCleanup() },
             onExport     = { showExportSheet = true },
             onSave       = { saveToBackend() },
-            hasBackendId = docId.isNotEmpty() && !docId.startsWith("scan_"),
+            hasBackendId = docId.isNotEmpty() && !docId.startsWith("scan_") && !docId.startsWith("gallery_"),
         )
 
         // ── AI status strip ───────────────────────────────────────────────────

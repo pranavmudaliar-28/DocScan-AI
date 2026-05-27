@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +36,7 @@ fun SignupScreen(
 ) {
     val scope    = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
+    val context  = LocalContext.current
 
     var name            by remember { mutableStateOf("") }
     var email           by remember { mutableStateOf("") }
@@ -62,6 +64,17 @@ fun SignupScreen(
             AuthRepository.register(email.trim(), password, name.trim()).fold(
                 onSuccess = { onSignUpSuccess() },
                 onFailure = { e -> error = e.message ?: "Registration failed"; isLoading = false },
+            )
+        }
+    }
+
+    fun doGoogleSignIn() {
+        keyboard?.hide()
+        error = null; isLoading = true
+        scope.launch {
+            AuthRepository.signInWithGoogle(context).fold(
+                onSuccess = { onSignUpSuccess() },
+                onFailure = { e -> error = e.message ?: "Google sign-in failed"; isLoading = false },
             )
         }
     }
@@ -332,7 +345,25 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // OR divider
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.20f))
+                Text("  OR  ", fontSize = 12.sp, color = Color.White.copy(alpha = 0.40f))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.20f))
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Google Sign-Up button
+            GoogleAuthButton(
+                label   = "Sign up with Google",
+                enabled = !isLoading,
+                onClick = { doGoogleSignIn() },
+            )
+
+            Spacer(Modifier.height(16.dp))
 
             Row(
                 verticalAlignment     = Alignment.CenterVertically,

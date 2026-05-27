@@ -14,6 +14,8 @@ import com.example.docscanai.data.AppThemeRepository
 import com.example.docscanai.data.AuthRepository
 import com.example.docscanai.data.ScanHistoryRepository
 import com.example.docscanai.ui.theme.DocScanAITheme
+import com.google.android.gms.ads.MobileAds
+import com.example.docscanai.ui.ads.AdMobInterstitial
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,6 +23,10 @@ class MainActivity : ComponentActivity() {
         AppThemeRepository.init(this)
         AuthRepository.init(this)
         ScanHistoryRepository.init(this)
+        
+        // Initialize AdMob and preload Interstitial
+        MobileAds.initialize(this) {}
+        AdMobInterstitial.loadAd(this)
         enableEdgeToEdge()
         setContent {
             val isDark by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()

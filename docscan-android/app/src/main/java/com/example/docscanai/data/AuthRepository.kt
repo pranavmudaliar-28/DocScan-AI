@@ -2,7 +2,9 @@ package com.example.docscanai.data
 
 import android.content.Context
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.builtin.IDToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,6 +82,23 @@ object AuthRepository {
                 this.password = password
             }
             saveName(name.ifBlank { email.substringBefore('@') })
+            _isLoggedIn.value = true
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithGoogle(context: Context): Result<Unit> {
+        return try {
+            val (idToken, rawNonce) = GoogleSignInHelper.getGoogleIdToken(context)
+            SupabaseModule.client.auth.signInWith(IDToken) {
+                this.idToken = idToken
+                provider     = Google
+                nonce        = rawNonce
+            }
+            val email = SupabaseModule.client.auth.currentUserOrNull()?.email ?: ""
+            saveName(email.substringBefore('@').ifBlank { "Google User" })
             _isLoggedIn.value = true
             Result.success(Unit)
         } catch (e: Exception) {

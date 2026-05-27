@@ -55,19 +55,23 @@ import com.example.docscanai.ui.permission.PermissionStatus
 import com.example.docscanai.ui.permission.rememberAppPermissionState
 import java.io.File
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 // ── Camera provider helper ────────────────────────────────────────────────────
 
 private suspend fun Context.getCameraProvider(): ProcessCameraProvider =
-    suspendCoroutine { continuation ->
-        ProcessCameraProvider.getInstance(this).also { future ->
-            future.addListener(
-                { continuation.resume(future.get()) },
-                ContextCompat.getMainExecutor(this),
-            )
-        }
+    suspendCancellableCoroutine { cont ->
+        val future = ProcessCameraProvider.getInstance(this)
+        future.addListener(
+            {
+                // future.get() is non-blocking here — listener fires only after the future completes
+                @Suppress("BlockingMethodInNonBlockingContext")
+                if (cont.isActive) cont.resume(future.get())
+            },
+            ContextCompat.getMainExecutor(this),
+        )
+        cont.invokeOnCancellation { future.cancel(true) }
     }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -105,7 +109,7 @@ private fun CameraViewfinder(onBack: () -> Unit, onGallery: () -> Unit, onCaptur
 
     // Multi-page state
     val pageCount        = MultiPageScanManager.pages.size
-    var showPostCapture  by remember { mutableStateOf<Uri?>(null) }
+    val showPostCapture  = remember { mutableStateOf<Uri?>(null) }
     var buildingPdf      by remember { mutableStateOf(false) }
 
     val imageCapture = remember {
@@ -167,7 +171,7 @@ private fun CameraViewfinder(onBack: () -> Unit, onGallery: () -> Unit, onCaptur
                         context, "${context.packageName}.fileprovider", photoFile
                     )
                     // Show post-capture choice instead of navigating immediately
-                    showPostCapture = uri
+                    showPostCapture.value = uri
                 }
                 override fun onError(exc: ImageCaptureException) {
                     isCapturing = false
@@ -226,19 +230,19 @@ private fun CameraViewfinder(onBack: () -> Unit, onGallery: () -> Unit, onCaptur
                 primary.copy(alpha = edgeFade * cornerGlow),
                 Offset(frameL + 2.dp.toPx(), sy),
                 Offset(frameR - 2.dp.toPx(), sy),
-                2.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round,
+                2.dp.toPx(), StrokeCap.Round,
             )
 
             val m = 18.dp.toPx(); val ms = 3.5f.dp.toPx()
             val mc = primary.copy(alpha = cornerGlow)
-            drawLine(mc, Offset(frameL, frameT + m), Offset(frameL, frameT), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameL, frameT), Offset(frameL + m, frameT), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameR - m, frameT), Offset(frameR, frameT), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameR, frameT), Offset(frameR, frameT + m), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameL, frameB - m), Offset(frameL, frameB), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameL, frameB), Offset(frameL + m, frameB), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameR - m, frameB), Offset(frameR, frameB), ms, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(mc, Offset(frameR, frameB - m), Offset(frameR, frameB), ms, androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(mc, Offset(frameL, frameT + m), Offset(frameL, frameT), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameL, frameT), Offset(frameL + m, frameT), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameR - m, frameT), Offset(frameR, frameT), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameR, frameT), Offset(frameR, frameT + m), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameL, frameB - m), Offset(frameL, frameB), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameL, frameB), Offset(frameL + m, frameB), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameR - m, frameB), Offset(frameR, frameB), ms, StrokeCap.Round)
+            drawLine(mc, Offset(frameR, frameB - m), Offset(frameR, frameB), ms, StrokeCap.Round)
         }
 
         // ── Top bar ───────────────────────────────────────────────────────────
@@ -491,19 +495,19 @@ private fun CameraViewfinder(onBack: () -> Unit, onGallery: () -> Unit, onCaptur
     }
 
     // ── Post-capture bottom sheet ─────────────────────────────────────────────
-    showPostCapture?.let { capturedUri ->
+    showPostCapture.value?.let { capturedUri ->
         PostCaptureSheet(
             capturedUri  = capturedUri,
             pageCount    = pageCount,
             onAddPage    = {
                 MultiPageScanManager.addPage(capturedUri)
-                showPostCapture = null
+                showPostCapture.value = null
             },
             onScanSingle = {
-                showPostCapture = null
+                showPostCapture.value = null
                 onCapture(capturedUri)
             },
-            onDismiss    = { showPostCapture = null },
+            onDismiss    = { showPostCapture.value = null },
         )
     }
 }
