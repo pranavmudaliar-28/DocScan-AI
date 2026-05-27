@@ -60,7 +60,10 @@ fun MainNavigation() {
 
             entry<Signup> {
                 SignupScreen(
-                    onSignUpSuccess = { backStack.removeLastOrNull() }, // back to Login
+                    onSignUpSuccess = {
+                        backStack.clear()
+                        backStack.add(Main)
+                    },
                     onBack          = { backStack.removeLastOrNull() },
                 )
             }
@@ -149,7 +152,12 @@ fun MainNavigation() {
             }
 
             entry<Search> {
-                SearchScreen(onBack = { backStack.removeLastOrNull() })
+                SearchScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onResultClick = { record ->
+                        backStack.add(DocumentViewer(docId = record.id, imageUri = record.imageUri))
+                    }
+                )
             }
 
             entry<PasswordReset> {

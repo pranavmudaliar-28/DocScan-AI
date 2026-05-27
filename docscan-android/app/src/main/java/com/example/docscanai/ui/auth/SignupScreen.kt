@@ -411,6 +411,7 @@ private fun DarkField(
             keyboardOptions      = keyboardOptions,
             keyboardActions      = keyboardActions,
             singleLine           = true,
+            placeholder          = { Text(label, color = Color.White.copy(alpha = 0.3f), fontSize = 15.sp) },
             modifier             = Modifier.fillMaxWidth().height(52.dp),
             textStyle            = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
             colors = OutlinedTextFieldDefaults.colors(

@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppThemeRepository.init(this)
+        com.example.docscanai.data.AppSettingsRepository.init(this)
         AuthRepository.init(this)
         ScanHistoryRepository.init(this)
         
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
         AdMobInterstitial.loadAd(this)
         enableEdgeToEdge()
         setContent {
-            val isDark by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             DocScanAITheme(darkTheme = isDark) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
@@ -7,6 +9,17 @@ plugins {
   alias(libs.plugins.ksp)
 }
 
+// ── Version management ────────────────────────────────────────────────────────
+// Edit version.properties to change versionName.
+// versionCode is auto-incremented every time you run assembleRelease / bundleRelease.
+val versionPropsFile = rootProject.file("version.properties")
+val versionProps = Properties()
+if (versionPropsFile.exists()) {
+    versionPropsFile.inputStream().use { stream -> versionProps.load(stream) }
+}
+val verCode: Int    = versionProps.getProperty("VERSION_CODE", "1").toInt()
+val verName: String = versionProps.getProperty("VERSION_NAME", "1.0.0")
+
 android {
     namespace  = "ai.docscan.app"
     compileSdk = 36
@@ -15,8 +28,8 @@ android {
         applicationId = "ai.docscan.app"
         minSdk        = 24
         targetSdk     = 36
-        versionCode   = 1
-        versionName   = "1.0.0"
+        versionCode   = verCode
+        versionName   = verName
     }
 
     // ── Signing ──────────────────────────────────────────────────────────────
@@ -153,6 +166,9 @@ dependencies {
   // Google Mobile Ads
   implementation("com.google.android.gms:play-services-ads:23.0.0")
 
+  // ML Kit Document Scanner
+  implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+
   // Supabase Kotlin SDK (Auth, PostgREST, Storage)
   implementation(platform(libs.supabase.bom))
   implementation(libs.supabase.auth)
@@ -161,7 +177,25 @@ dependencies {
   implementation(libs.ktor.client.android)
 
   // Google Sign-In via Credential Manager
-  implementation(libs.androidx.credentials)
-  implementation(libs.androidx.credentials.play.services)
+  implementation(libs.credentials)
+  implementation(libs.credentials.play)
   implementation(libs.googleid)
+}
+
+// ── Version bump tasks ────────────────────────────────────────────────────────
+
+// Increments versionCode by 1 and writes it back to version.properties.
+// Runs automatically before every assembleRelease / bundleRelease.
+tasks.register("bumpVersionCode") {
+    doFirst {
+        val newCode = verCode + 1
+        versionProps.setProperty("VERSION_CODE", newCode.toString())
+        versionPropsFile.outputStream().use { os -> versionProps.store(os, null) }
+        println("versionCode bumped: $verCode → $newCode  (versionName: $verName)")
+    }
+}
+
+afterEvaluate {
+    tasks.findByName("assembleRelease")?.dependsOn("bumpVersionCode")
+    tasks.findByName("bundleRelease")?.dependsOn("bumpVersionCode")
 }

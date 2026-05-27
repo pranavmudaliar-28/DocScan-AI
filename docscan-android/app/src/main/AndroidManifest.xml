@@ -4,9 +4,7 @@
     <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Camera -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Camera (Now handled by Google Play Services ML Kit) -->
 
     <!-- Media / Storage -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />

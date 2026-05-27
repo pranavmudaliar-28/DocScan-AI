@@ -22,8 +22,8 @@ hiltNavigationCompose = "1.2.0"
 camerax = "1.4.1"
 coil = "2.7.0"
 mlkitTextRecognition = "16.0.0"
-supabase             = "2.6.1"
-ktor                 = "2.3.12"
+supabase             = "3.0.0"
+ktor                 = "3.0.0"
 credentialsManager   = "1.3.0"
 googleid             = "1.1.1"
 
@@ -72,15 +72,15 @@ mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version
 
 androidx-print = { module = "androidx.print:print", version = "1.0.0" }
 
-supabase-bom        = { module = "io.github.jan-tennant:supabase-bom",  version.ref = "supabase" }
-supabase-auth       = { module = "io.github.jan-tennant:auth-kt" }
-supabase-postgrest  = { module = "io.github.jan-tennant:postgrest-kt" }
-supabase-storage    = { module = "io.github.jan-tennant:storage-kt" }
+supabase-bom        = { module = "io.github.jan-tennert.supabase:bom",  version.ref = "supabase" }
+supabase-auth       = { module = "io.github.jan-tennert.supabase:auth-kt" }
+supabase-postgrest  = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
+supabase-storage    = { module = "io.github.jan-tennert.supabase:storage-kt" }
 ktor-client-android = { module = "io.ktor:ktor-client-android",         version.ref = "ktor" }
 
-androidx-credentials               = { module = "androidx.credentials:credentials",                    version.ref = "credentialsManager" }
-androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsManager" }
-googleid                           = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+credentials      = { module = "androidx.credentials:credentials",                    version.ref = "credentialsManager" }
+credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsManager" }
+googleid         = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

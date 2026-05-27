@@ -1,5 +1,6 @@
 package com.example.docscanai.ui.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.docscanai.data.AppSettingsRepository
 import com.example.docscanai.data.AppThemeRepository
 import com.example.docscanai.data.AuthRepository
 import com.example.docscanai.ui.theme.AIGlow
@@ -38,18 +40,20 @@ fun SettingsScreen(
     onSignOut: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var highQuality      by remember { mutableStateOf(true) }
-    var autoDetect       by remember { mutableStateOf(true) }
-    var saveMetadata     by remember { mutableStateOf(false) }
-    val darkMode         by AppThemeRepository.isDarkTheme.collectAsStateWithLifecycle()
-    var notifications    by remember { mutableStateOf(true) }
-    // AI & OCR
-    var aiSuggestions    by remember { mutableStateOf(true) }
-    var autoCleanup      by remember { mutableStateOf(true) }
-    var smartTagging     by remember { mutableStateOf(true) }
-    // Cloud & Sync
-    var autoSync         by remember { mutableStateOf(true) }
-    var wifiOnlySync     by remember { mutableStateOf(false) }
+    
+    val highQuality      by AppSettingsRepository.highQuality.collectAsStateWithLifecycle()
+    val autoDetect       by AppSettingsRepository.autoDetect.collectAsStateWithLifecycle()
+    val saveMetadata     by AppSettingsRepository.saveMetadata.collectAsStateWithLifecycle()
+    val notifications    by AppSettingsRepository.notifications.collectAsStateWithLifecycle()
+    val aiSuggestions    by AppSettingsRepository.aiSuggestions.collectAsStateWithLifecycle()
+    val autoCleanup      by AppSettingsRepository.autoCleanup.collectAsStateWithLifecycle()
+    val smartTagging     by AppSettingsRepository.smartTagging.collectAsStateWithLifecycle()
+    val autoSync         by AppSettingsRepository.autoSync.collectAsStateWithLifecycle()
+    val wifiOnlySync     by AppSettingsRepository.wifiOnlySync.collectAsStateWithLifecycle()
+
+    fun notImplemented() {
+        Toast.makeText(context, "Coming soon!", Toast.LENGTH_SHORT).show()
+    }
 
     Scaffold(
         bottomBar = {
@@ -71,226 +75,222 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            // Center content on tablets; match phone padding on small screens
             val sidePad = if (maxWidth > 600.dp) ((maxWidth - 600.dp) / 2).coerceAtLeast(0.dp) else 0.dp
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = sidePad)
-                .navigationBarsPadding(),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
-            // Profile card
-            item {
-                ProfileCard()
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = sidePad)
+                    .navigationBarsPadding(),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                // Profile card
+                item { ProfileCard() }
 
-            // Scan Settings
-            item {
-                SettingsSection(title = "Scan Settings") {
-                    SettingsToggleRow(
-                        icon     = Icons.Default.HighQuality,
-                        label    = "High Quality Mode",
-                        subtitle = "Capture at maximum resolution",
-                        checked  = highQuality,
-                        onCheckedChange = { highQuality = it }
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.CenterFocusStrong,
-                        label    = "Auto-detect Document",
-                        subtitle = "Automatically find document edges",
-                        checked  = autoDetect,
-                        onCheckedChange = { autoDetect = it }
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon     = Icons.Default.PhotoSizeSelectLarge,
-                        label    = "Default Format",
-                        subtitle = "JPEG · PDF · PNG",
-                        onClick  = {}
-                    )
+                // Scan Settings
+                item {
+                    SettingsSection(title = "Scan Settings") {
+                        SettingsToggleRow(
+                            icon     = Icons.Default.HighQuality,
+                            label    = "High Quality Mode",
+                            subtitle = "Capture at maximum resolution",
+                            checked  = highQuality,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "highQuality", it) }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.CenterFocusStrong,
+                            label    = "Auto-detect Document",
+                            subtitle = "Automatically find document edges",
+                            checked  = autoDetect,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "autoDetect", it) }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon     = Icons.Default.PhotoSizeSelectLarge,
+                            label    = "Default Format",
+                            subtitle = "JPEG · PDF · PNG",
+                            onClick  = { notImplemented() }
+                        )
+                    }
                 }
-            }
 
-            // Export Settings
-            item {
-                SettingsSection(title = "Export Settings") {
-                    SettingsNavRow(
-                        icon     = Icons.Default.FolderOpen,
-                        label    = "Save Location",
-                        subtitle = "Documents / DocScan AI",
-                        onClick  = {}
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.Info,
-                        label    = "Include Metadata",
-                        subtitle = "Embed scan date and settings in file",
-                        checked  = saveMetadata,
-                        onCheckedChange = { saveMetadata = it }
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon     = Icons.Default.PictureAsPdf,
-                        label    = "PDF Compression",
-                        subtitle = "Balanced",
-                        onClick  = {}
-                    )
+                // Export Settings
+                item {
+                    SettingsSection(title = "Export Settings") {
+                        SettingsNavRow(
+                            icon     = Icons.Default.FolderOpen,
+                            label    = "Save Location",
+                            subtitle = "Documents / DocScan AI",
+                            onClick  = { notImplemented() }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.Info,
+                            label    = "Include Metadata",
+                            subtitle = "Embed scan date and settings in file",
+                            checked  = saveMetadata,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "saveMetadata", it) }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon     = Icons.Default.PictureAsPdf,
+                            label    = "PDF Compression",
+                            subtitle = "Balanced",
+                            onClick  = { notImplemented() }
+                        )
+                    }
                 }
-            }
 
-            // AI & OCR
-            item {
-                SettingsSection(title = "AI & OCR") {
-                    SettingsToggleRow(
-                        icon     = Icons.Default.AutoAwesome,
-                        label    = "AI Suggestions",
-                        subtitle = "Smart field detection and document categorisation",
-                        checked  = aiSuggestions,
-                        onCheckedChange = { aiSuggestions = it }
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.AutoFixHigh,
-                        label    = "Auto-Cleanup OCR",
-                        subtitle = "Fix common OCR errors automatically after scanning",
-                        checked  = autoCleanup,
-                        onCheckedChange = { autoCleanup = it }
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon     = Icons.Default.Language,
-                        label    = "OCR Language",
-                        subtitle = "English",
-                        onClick  = {}
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.Label,
-                        label    = "Smart Tagging",
-                        subtitle = "Automatically tag documents by content type",
-                        checked  = smartTagging,
-                        onCheckedChange = { smartTagging = it }
-                    )
+                // AI & OCR
+                item {
+                    SettingsSection(title = "AI & OCR") {
+                        SettingsToggleRow(
+                            icon     = Icons.Default.AutoAwesome,
+                            label    = "AI Suggestions",
+                            subtitle = "Smart field detection and document categorisation",
+                            checked  = aiSuggestions,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "aiSuggestions", it) }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.AutoFixHigh,
+                            label    = "Auto-Cleanup OCR",
+                            subtitle = "Fix common OCR errors automatically after scanning",
+                            checked  = autoCleanup,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "autoCleanup", it) }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon     = Icons.Default.Language,
+                            label    = "OCR Language",
+                            subtitle = "English",
+                            onClick  = { notImplemented() }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.Label,
+                            label    = "Smart Tagging",
+                            subtitle = "Automatically tag documents by content type",
+                            checked  = smartTagging,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "smartTagging", it) }
+                        )
+                    }
                 }
-            }
 
-            // Cloud & Sync
-            item {
-                SettingsSection(title = "Cloud & Sync") {
-                    SettingsToggleRow(
-                        icon     = Icons.Default.CloudSync,
-                        label    = "Auto-Sync",
-                        subtitle = "Upload scans to Supabase storage automatically",
-                        checked  = autoSync,
-                        onCheckedChange = { autoSync = it }
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.Wifi,
-                        label    = "Wi-Fi Only",
-                        subtitle = "Only sync when connected to Wi-Fi",
-                        checked  = wifiOnlySync,
-                        onCheckedChange = { wifiOnlySync = it }
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon     = Icons.Default.Storage,
-                        label    = "Storage Used",
-                        subtitle = "Tap to view usage details",
-                        onClick  = {}
-                    )
+                // Cloud & Sync
+                item {
+                    SettingsSection(title = "Cloud & Sync") {
+                        SettingsToggleRow(
+                            icon     = Icons.Default.CloudSync,
+                            label    = "Auto-Sync",
+                            subtitle = "Upload scans to Supabase storage automatically",
+                            checked  = autoSync,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "autoSync", it) }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.Wifi,
+                            label    = "Wi-Fi Only",
+                            subtitle = "Only sync when connected to Wi-Fi",
+                            checked  = wifiOnlySync,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "wifiOnlySync", it) }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon     = Icons.Default.Storage,
+                            label    = "Storage Used",
+                            subtitle = "Tap to view usage details",
+                            onClick  = { notImplemented() }
+                        )
+                    }
                 }
-            }
 
-            // Appearance
-            item {
-                SettingsSection(title = "Appearance") {
-                    SettingsToggleRow(
-                        icon     = Icons.Default.DarkMode,
-                        label    = "Dark Mode",
-                        subtitle = "Use dark theme throughout the app",
-                        checked  = darkMode,
-                        onCheckedChange = { AppThemeRepository.setDarkTheme(context, it) }
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon     = Icons.Default.Notifications,
-                        label    = "Notifications",
-                        subtitle = "Processing complete alerts",
-                        checked  = notifications,
-                        onCheckedChange = { notifications = it }
-                    )
+                // Appearance
+                item {
+                    SettingsSection(title = "Appearance") {
+                        SettingsNavRow(
+                            icon     = Icons.Default.DarkMode,
+                            label    = "Theme",
+                            subtitle = "Follows system dark/light mode automatically",
+                            onClick  = { }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon     = Icons.Default.Notifications,
+                            label    = "Notifications",
+                            subtitle = "Processing complete alerts",
+                            checked  = notifications,
+                            onCheckedChange = { AppSettingsRepository.setSetting(context, "notifications", it) }
+                        )
+                    }
                 }
-            }
 
-            // Help & Support
-            item {
-                SettingsSection(title = "Help & Support") {
-                    SettingsNavRow(
-                        icon    = Icons.Default.School,
-                        label   = "View Tutorial",
-                        onClick = onViewOnboarding
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon    = Icons.Default.HelpOutline,
-                        label   = "Help Center",
-                        onClick = {}
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon    = Icons.Default.Security,
-                        label   = "Privacy Policy",
-                        onClick = {}
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon    = Icons.Default.Description,
-                        label   = "Terms of Service",
-                        onClick = {}
-                    )
+                // Help & Support
+                item {
+                    SettingsSection(title = "Help & Support") {
+                        SettingsNavRow(
+                            icon    = Icons.Default.School,
+                            label   = "View Tutorial",
+                            onClick = onViewOnboarding
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon    = Icons.Default.HelpOutline,
+                            label   = "Help Center",
+                            onClick = { notImplemented() }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon    = Icons.Default.Security,
+                            label   = "Privacy Policy",
+                            onClick = { notImplemented() }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon    = Icons.Default.Description,
+                            label   = "Terms of Service",
+                            onClick = { notImplemented() }
+                        )
+                    }
                 }
-            }
 
-            // About
-            item {
-                SettingsSection(title = "About") {
-                    SettingsNavRow(
-                        icon     = Icons.Default.Info,
-                        label    = "Version",
-                        subtitle = "1.0.0 (build 1)",
-                        onClick  = {}
-                    )
-                    SettingsDivider()
-                    SettingsNavRow(
-                        icon     = Icons.Default.SystemUpdate,
-                        label    = "Check for Updates",
-                        onClick  = {}
-                    )
+                // About
+                item {
+                    SettingsSection(title = "About") {
+                        SettingsNavRow(
+                            icon     = Icons.Default.Info,
+                            label    = "Version",
+                            subtitle = "1.0.0 (build 1)",
+                            onClick  = { notImplemented() }
+                        )
+                        SettingsDivider()
+                        SettingsNavRow(
+                            icon     = Icons.Default.SystemUpdate,
+                            label    = "Check for Updates",
+                            onClick  = { notImplemented() }
+                        )
+                    }
                 }
-            }
 
-            // Sign out
-            item {
-                Spacer(Modifier.height(8.dp))
-                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    OutlinedButton(
-                        onClick  = onSignOut,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape    = MaterialTheme.shapes.large,
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                    ) {
-                        Icon(Icons.Default.Logout, null,
-                            tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Sign Out", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
+                // Sign out
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        OutlinedButton(
+                            onClick  = onSignOut,
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape    = MaterialTheme.shapes.large,
+                            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                        ) {
+                            Icon(Icons.Default.Logout, null,
+                                tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Sign Out", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
-        } // LazyColumn
-        } // BoxWithConstraints
+        }
     }
 }
 
@@ -316,7 +316,6 @@ private fun ProfileCard(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // Avatar circle
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -341,7 +340,6 @@ private fun ProfileCard(
                         style = MaterialTheme.typography.titleSmall,
                         color = Color.White,
                     )
-                    // Pro badge
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))

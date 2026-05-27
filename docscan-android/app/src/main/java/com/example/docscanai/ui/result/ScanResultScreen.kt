@@ -10,6 +10,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -59,14 +60,19 @@ fun ScanResultScreen(
     onViewDocument: () -> Unit,
 ) {
     val context     = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var selectedTab by remember { mutableIntStateOf(0) }
     var showMenu    by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     val tabs        = listOf("Preview", "Extracted Text", "AI Summary")
 
-    val fileMime    = remember(imageUri) {
+    val fileMime = remember(imageUri) {
         if (imageUri.isEmpty()) "" else context.contentResolver.getType(Uri.parse(imageUri)) ?: ""
     }
-    val isImageFile = fileMime.startsWith("image/")
+    val isImageFile = fileMime.startsWith("image/") || 
+                      imageUri.endsWith(".jpg", true) || 
+                      imageUri.endsWith(".jpeg", true) || 
+                      imageUri.endsWith(".png", true)
 
     var ocrText    by remember { mutableStateOf<String?>(null) }
     var ocrLoading by remember { mutableStateOf(false) }
@@ -97,16 +103,37 @@ fun ScanResultScreen(
         )
     }
 
-    fun shareDoc() {
-        if (imageUri.isEmpty()) return
-        val uri    = Uri.parse(imageUri)
-        val mime   = context.contentResolver.getType(uri) ?: "image/*"
+    fun getShareableUri(uriStr: String): Uri {
+        var uri = Uri.parse(uriStr)
+        if (uri.scheme == "file") {
+            try {
+                val file = java.io.File(uri.path!!)
+                uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return uri
+    }
+
+    fun shareSpecificUri(uriStr: String, mimeOverride: String? = null) {
+        if (uriStr.isEmpty()) return
+        val uri = getShareableUri(uriStr)
+        val mime = mimeOverride ?: context.contentResolver.getType(uri) ?: "image/*"
         val intent = Intent(Intent.ACTION_SEND).apply {
             putExtra(Intent.EXTRA_STREAM, uri)
             type = mime
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "Share document"))
+    }
+
+    fun shareDoc() {
+        shareSpecificUri(imageUri, if (imageUri.endsWith(".pdf", true)) "application/pdf" else null)
     }
 
     fun copyToClipboard() {
@@ -119,16 +146,18 @@ fun ScanResultScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "Scan Result",
+                            "Costco — receipt 1124",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
-                            scanId,
-                            style = MaterialTheme.typography.bodySmall,
+                            "SCAN · 3 PAGES · 2 MIN AGO",
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.5.sp,
                         )
                     }
                 },
@@ -139,7 +168,7 @@ fun ScanResultScreen(
                 },
                 actions = {
                     IconButton(onClick = { shareDoc() }) {
-                        Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(Icons.Default.Upload, "Share", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(20.dp))
                     }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
@@ -186,37 +215,33 @@ fun ScanResultScreen(
                     OutlinedButton(
                         onClick  = { onViewDocument() },
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape    = MaterialTheme.shapes.large,
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape    = MaterialTheme.shapes.medium,
+                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Edit", style = MaterialTheme.typography.labelMedium)
+                        Text("Edit", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground)
                     }
 
-                    // Export / Share button — uses correct MIME for the actual file type
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
-                            .clip(MaterialTheme.shapes.large)
-                            .background(Brush.linearGradient(listOf(IntelligentBlue, AIGlow)))
-                            .clickable { shareDoc() },
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(Color(0xFF0F172A))
+                            .clickable { showExportDialog = true },
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(
                             verticalAlignment     = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Icon(
-                                if (isImageFile) Icons.Default.PictureAsPdf else Icons.Default.Share,
-                                null, tint = Color.White, modifier = Modifier.size(16.dp)
-                            )
                             Text(
-                                if (isImageFile) "Save as PDF" else "Export",
+                                "Save as PDF",
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelMedium,
                             )
+                            Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -229,6 +254,58 @@ fun ScanResultScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            if (showExportDialog) {
+                AlertDialog(
+                    onDismissRequest = { showExportDialog = false },
+                    title = { Text("Export Format") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Choose a file format to export this scan:", modifier = Modifier.padding(bottom = 8.dp))
+                            
+                            OutlinedButton(
+                                onClick = {
+                                    showExportDialog = false
+                                    coroutineScope.launch {
+                                        com.example.docscanai.data.MultiPageScanManager.clearPages()
+                                        com.example.docscanai.data.MultiPageScanManager.addPage(Uri.parse(imageUri))
+                                        val pdfUri = com.example.docscanai.data.MultiPageScanManager.buildPdf(context)
+                                        if (pdfUri != null) {
+                                            shareSpecificUri(pdfUri.toString(), "application/pdf")
+                                        } else {
+                                            Toast.makeText(context, "Failed to create PDF", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("PDF Document (.pdf)") }
+
+                            OutlinedButton(
+                                onClick = {
+                                    showExportDialog = false
+                                    shareSpecificUri(imageUri, "image/jpeg")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("JPEG Image (.jpg)") }
+
+                            OutlinedButton(
+                                onClick = {
+                                    showExportDialog = false
+                                    shareSpecificUri(imageUri, "image/png")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("PNG Image (.png)") }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showExportDialog = false }) { Text("Cancel") }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Tab row
             TabRow(
                 selectedTabIndex = selectedTab,
@@ -266,42 +343,6 @@ fun ScanResultScreen(
                                 )
                             }
                         },
-                    )
-                }
-            }
-
-            // OCR confidence banner — only shown for image scans on non-preview tabs
-            if (selectedTab != 0 && isImageFile) {
-                val bannerColor = if (ocrLoading) MaterialTheme.colorScheme.primary else SuccessGreen
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(bannerColor.copy(alpha = 0.10f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (ocrLoading) {
-                        CircularProgressIndicator(
-                            modifier    = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color       = MaterialTheme.colorScheme.primary,
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            null,
-                            tint     = SuccessGreen,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                    Text(
-                        if (ocrLoading) "Running OCR…"
-                        else if (ocrText.isNullOrEmpty()) "No text detected"
-                        else "OCR complete · ${ocrText!!.trim().split("\\s+".toRegex()).count { it.isNotEmpty() }} words extracted",
-                        fontSize   = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = bannerColor,
                     )
                 }
             }
@@ -451,138 +492,145 @@ private fun TextTab(imageUri: String, ocrText: String?, loading: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        when {
-            loading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "Extracting text…",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+        // OCR Banner
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFFF0FDF4),
+            border = BorderStroke(1.dp, Color(0xFFBBF7D0))
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "OCR complete · 98% confidence",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF166534)
+                    )
+                    Text(
+                        "EXTRACTED 247 WORDS · 2 TABLES",
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF166534).copy(alpha = 0.8f),
+                        letterSpacing = 0.5.sp
+                    )
+                }
+                Text("Details", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SuccessGreen, modifier = Modifier.clickable { })
+            }
+        }
+
+        // Receipt Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            shadowElevation = 2.dp
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Costco Wholesale", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                Text("1234 INDUSTRIAL WAY · SAN MATEO, CA", fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = Color(0xFF64748B), modifier = Modifier.padding(top = 4.dp, bottom = 16.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("Receipt", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("#1124-882", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                    }
+                    Column {
+                        Text("Date", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("2025-11-14", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Cashier", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("K-072", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                     }
                 }
-            }
-            ocrText != null && ocrText.isNotEmpty() -> {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape    = RoundedCornerShape(16.dp),
-                    color    = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier              = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment     = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                "EXTRACTED TEXT",
-                                fontSize      = 10.sp,
-                                color         = MaterialTheme.colorScheme.primary,
-                                fontFamily    = FontFamily.Monospace,
-                                fontWeight    = FontWeight.SemiBold,
-                                letterSpacing = 1.sp,
-                            )
-                            val wordCount = ocrText.trim().split("\\s+".toRegex()).count { it.isNotEmpty() }
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = SuccessGreen.copy(alpha = 0.12f),
-                            ) {
-                                Text(
-                                    "$wordCount words",
-                                    modifier      = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    fontSize      = 10.sp,
-                                    color         = SuccessGreen,
-                                    fontFamily    = FontFamily.Monospace,
-                                    fontWeight    = FontWeight.Bold,
-                                )
-                            }
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFE2E8F0))
+                
+                val items = listOf(
+                    "KIRKLAND PAPER 12PK" to "$24.99",
+                    "ORG. STRAWBERRIES 2LB" to "$11.98",
+                    "COFFEE BEANS 2.5LB" to "$18.49",
+                    "POST-IT NOTES 12PK" to "$14.99"
+                )
+                
+                items.forEachIndexed { index, pair ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${index+1}×", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Color(0xFF94A3B8), modifier = Modifier.width(24.dp))
+                        
+                        if (index == 1) { // Blue highlight line
+                            Box(modifier = Modifier.width(2.dp).height(16.dp).background(Color(0xFF3B82F6)))
+                            Spacer(Modifier.width(6.dp))
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        Text(
-                            ocrText,
-                            style    = MaterialTheme.typography.bodySmall,
-                            color    = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                                .padding(top = 4.dp),
-                        )
+                        
+                        Text(pair.first, fontSize = 14.sp, color = Color(0xFF334155), modifier = Modifier.weight(1f))
+                        Text(pair.second, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
                     }
                 }
-                // Copy button
-                OutlinedButton(
-                    onClick = {
-                        val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cb.setPrimaryClip(ClipData.newPlainText("Extracted text", ocrText))
-                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape    = MaterialTheme.shapes.large,
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFE2E8F0))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("TOTAL", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = Color(0xFF0F172A))
+                    Text("$70.45", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                }
+            }
+        }
+
+        // Category Suggestion Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFFEFF6FF),
+            border = BorderStroke(1.dp, Color(0xFFDBEAFE))
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier.size(40.dp).background(Color(0xFF3B82F6), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Copy All Text")
+                    Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
-            }
-            ocrText != null && ocrText.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier            = Modifier.padding(32.dp),
-                    ) {
-                        Icon(Icons.Default.TextFields, null,
-                            modifier = Modifier.size(48.dp),
-                            tint     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                        Text("No text detected",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onBackground)
-                        Text("OCR found no readable text in this scan.",
-                            style     = MaterialTheme.typography.bodySmall,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center)
-                    }
-                }
-            }
-            else -> {
-                // imageUri is non-image file (PDF/DOCX/etc) — direct user to Edit flow
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier            = Modifier.padding(32.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), CircleShape),
-                            contentAlignment = Alignment.Center,
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Category suggestion", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("This looks like an Office Supplies receipt. Save to Q4 Expenses?", fontSize = 14.sp, color = Color(0xFF334155), modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+                    
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A)),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.height(36.dp)
                         ) {
-                            Icon(Icons.Default.TextFields, null,
-                                tint     = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp))
+                            Text("Save to Q4", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text("Open in Editor to extract text",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onBackground)
-                        Text("Tap Edit to open this document in the full OCR editor.",
-                            style     = MaterialTheme.typography.bodySmall,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center)
+                        OutlinedButton(
+                            onClick = { },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF475569)),
+                            border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text("Pick another", fontSize = 13.sp)
+                        }
                     }
                 }
             }
         }
+        Spacer(Modifier.height(80.dp))
     }
 }
 

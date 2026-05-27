@@ -324,7 +324,7 @@ fun OcrOverlayEditorScreen(
                         val w = (block.width  * scaleX).coerceAtLeast(32f)
                         val h = (block.height * scaleY).coerceAtLeast(24f)
                         val isSelected = block.id == selectedBlock?.id
-                        val textSp = ((h * 0.52f) / density.density).sp.coerceIn(6.5.sp, 11.sp)
+                        val textSp = ((h * 0.52f) / density.density).coerceIn(6.5f, 11f).sp
 
                         Box(
                             modifier = Modifier
