@@ -16,14 +16,18 @@ import com.example.docscanai.ui.main.MainScreen
 import com.example.docscanai.ui.onboarding.OnboardingScreen
 import com.example.docscanai.ui.result.ScanResultScreen
 import com.example.docscanai.ui.settings.SettingsScreen
+import com.example.docscanai.ui.settings.PrivacyPolicyScreen
+import com.example.docscanai.ui.settings.TermsAndConditionsScreen
 import com.example.docscanai.ui.splash.SplashScreen
 import com.example.docscanai.ui.convert.ConvertScreen
 import com.example.docscanai.ui.editor.TextEditScreen
 import com.example.docscanai.ui.viewer.DocumentEditScreen
 import com.example.docscanai.ui.viewer.DocumentViewerScreen
 
+import androidx.compose.runtime.LaunchedEffect
+
 @Composable
-fun MainNavigation() {
+fun MainNavigation(startWithScan: Boolean = false) {
     val backStack = rememberNavBackStack(Splash)
 
     NavDisplay(
@@ -69,6 +73,11 @@ fun MainNavigation() {
             }
 
             entry<Main> {
+                LaunchedEffect(Unit) {
+                    if (startWithScan) {
+                        backStack.add(CameraScan)
+                    }
+                }
                 MainScreen(
                     onScan     = { backStack.add(CameraScan) },
                     onGallery  = { backStack.add(GalleryImport) },
@@ -171,6 +180,8 @@ fun MainNavigation() {
                 SettingsScreen(
                     onBack           = { backStack.removeLastOrNull() },
                     onViewOnboarding = { backStack.add(Onboarding) },
+                    onPrivacyPolicy  = { backStack.add(PrivacyPolicy) },
+                    onTermsAndConditions = { backStack.add(TermsAndConditions) },
                     onSignOut        = {
                         AuthRepository.signOut()
                         // Clear entire back stack down to one entry, replace with Login
@@ -178,6 +189,14 @@ fun MainNavigation() {
                         backStack[0] = Login
                     },
                 )
+            }
+
+            entry<PrivacyPolicy> {
+                PrivacyPolicyScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<TermsAndConditions> {
+                TermsAndConditionsScreen(onBack = { backStack.removeLastOrNull() })
             }
         }
     )

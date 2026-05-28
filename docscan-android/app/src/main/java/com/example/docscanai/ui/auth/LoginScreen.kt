@@ -83,7 +83,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0F2240))))
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
             .systemBarsPadding()
     ) {
         // Particle dots
@@ -117,7 +117,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Default.Description, null, tint = AIGlow, modifier = Modifier.size(30.dp))
@@ -129,21 +129,21 @@ fun LoginScreen(
                 "Welcome back",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                 letterSpacing = (-0.5).sp,
             )
             Text(
                 "Sign in to your account",
                 fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.65f),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
                 modifier = Modifier.padding(top = 6.dp, bottom = 28.dp),
             )
 
             // Glass card
             Surface(
                 shape  = RoundedCornerShape(24.dp),
-                color  = Color.White.copy(alpha = 0.06f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                color  = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)),
                 shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -158,7 +158,7 @@ fun LoginScreen(
                         label         = "Email address",
                         leadingIcon   = {
                             Icon(Icons.Default.Email, null,
-                                tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                                tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
                         },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
@@ -173,14 +173,14 @@ fun LoginScreen(
                         label         = "Password",
                         leadingIcon   = {
                             Icon(Icons.Default.Lock, null,
-                                tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                                tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
                         },
                         trailingIcon = {
                             IconButton(onClick = { showPassword = !showPassword }) {
                                 Icon(
                                     if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = if (showPassword) "Hide" else "Show",
-                                    tint = Color.White.copy(alpha = 0.5f),
+                                    tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -262,16 +262,16 @@ fun LoginScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(
                     modifier  = Modifier.weight(1f),
-                    color     = Color.White.copy(alpha = 0.20f),
+                    color     = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f),
                 )
                 Text(
                     "  OR  ",
                     fontSize = 12.sp,
-                    color    = Color.White.copy(alpha = 0.40f),
+                    color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.40f),
                 )
                 HorizontalDivider(
                     modifier = Modifier.weight(1f),
-                    color    = Color.White.copy(alpha = 0.20f),
+                    color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f),
                 )
             }
 
@@ -292,8 +292,8 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .clickable(enabled = !isLoading) { doGuest() },
                 shape  = RoundedCornerShape(14.dp),
-                color  = Color.White.copy(alpha = 0.04f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                color  = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.04f),
+                border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)),
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -306,20 +306,20 @@ fun LoginScreen(
                     ) {
                         Icon(
                             Icons.Default.PersonOutline, null,
-                            tint     = Color.White.copy(alpha = 0.70f),
+                            tint     = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.70f),
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
                             "Continue as Guest",
                             fontSize   = 15.sp,
                             fontWeight = FontWeight.Medium,
-                            color      = Color.White.copy(alpha = 0.80f),
+                            color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.80f),
                         )
                     }
                     Text(
                         "Limited features · no account required",
                         fontSize = 11.sp,
-                        color    = Color.White.copy(alpha = 0.40f),
+                        color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.40f),
                     )
                 }
             }
@@ -337,7 +337,7 @@ fun LoginScreen(
                         Box(
                             modifier = Modifier
                                 .width(1.dp).height(12.dp)
-                                .background(Color.White.copy(alpha = 0.18f))
+                                .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.18f))
                         )
                     }
                     Row(
@@ -353,7 +353,7 @@ fun LoginScreen(
                         Text(
                             label,
                             fontSize      = 10.sp,
-                            color         = Color.White.copy(alpha = 0.45f),
+                            color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
                             fontWeight    = FontWeight.Medium,
                             letterSpacing = 0.3.sp,
                         )
@@ -368,11 +368,11 @@ fun LoginScreen(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Text("New here?", fontSize = 14.sp, color = Color.White.copy(alpha = 0.55f))
+                Text("New here?", fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f))
                 TextButton(onClick = onSignUp) {
                     Text(
                         "Create an account",
-                        color      = Color.White,
+                        color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.SemiBold,
                         fontSize   = 14.sp,
                     )
@@ -397,8 +397,8 @@ internal fun GoogleAuthButton(
             .fillMaxWidth()
             .clickable(enabled = enabled) { onClick() },
         shape  = RoundedCornerShape(14.dp),
-        color  = Color.White.copy(alpha = if (enabled) 0.95f else 0.50f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
+        color  = MaterialTheme.colorScheme.onBackground.copy(alpha = if (enabled) 0.95f else 0.50f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f)),
     ) {
         Row(
             modifier              = Modifier
@@ -419,7 +419,7 @@ internal fun GoogleAuthButton(
                 text       = label,
                 fontSize   = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color      = Color(0xFF1F1F1F),
+                color      = MaterialTheme.colorScheme.background,
             )
         }
     }
@@ -442,7 +442,7 @@ private fun LoginDarkField(
         Text(
             label.uppercase(),
             fontSize      = 10.sp,
-            color         = Color.White.copy(alpha = 0.55f),
+            color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
             fontWeight    = FontWeight.Medium,
             letterSpacing = 1.sp,
             fontFamily    = FontFamily.Monospace,
@@ -456,16 +456,16 @@ private fun LoginDarkField(
             keyboardOptions      = keyboardOptions,
             keyboardActions      = keyboardActions,
             singleLine           = true,
-            placeholder          = { Text(label, color = Color.White.copy(alpha = 0.3f), fontSize = 15.sp) },
+            placeholder          = { Text("Enter ${label.lowercase()}", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 15.sp) },
             modifier             = Modifier.fillMaxWidth().height(52.dp),
             textStyle            = androidx.compose.ui.text.TextStyle(
-                color    = Color.White,
+                color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                 fontSize = 15.sp,
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
-                focusedContainerColor   = Color.White.copy(alpha = 0.08f),
-                unfocusedBorderColor    = Color.White.copy(alpha = 0.12f),
+                unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                focusedContainerColor   = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
+                unfocusedBorderColor    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                 focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
                 cursorColor             = AIGlow,
             ),

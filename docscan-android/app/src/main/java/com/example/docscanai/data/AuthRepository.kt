@@ -5,6 +5,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.auth.providers.builtin.OTP
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,6 +114,43 @@ object AuthRepository {
             SupabaseModule.client.auth.signInAnonymously()
             saveName("Guest")
             _isLoggedIn.value = true
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resetPasswordForEmail(email: String): Result<Unit> {
+        return try {
+            val exists = SupabaseModule.client.postgrest.rpc("check_email_exists", mapOf("lookup_email" to email)).decodeAs<Boolean>()
+            if (!exists) {
+                return Result.failure(Exception("Email is not registered."))
+            }
+            SupabaseModule.client.auth.resetPasswordForEmail(email)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verifyOtp(email: String, otp: String): Result<Unit> {
+        return try {
+            SupabaseModule.client.auth.verifyEmailOtp(
+                type = io.github.jan.supabase.auth.OtpType.Email.RECOVERY,
+                email = email,
+                token = otp
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updatePassword(newPassword: String): Result<Unit> {
+        return try {
+            SupabaseModule.client.auth.updateUser {
+                password = newPassword
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

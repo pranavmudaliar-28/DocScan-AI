@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -175,8 +176,8 @@ fun GalleryImportScreen(
     if (showRationaleDialog) {
         PermissionRationaleDialog(
             icon      = Icons.Default.PhotoLibrary,
-            title     = "Storage Access",
-            rationale = "DocScan AI needs access to your files to import documents, images, PDFs, and more.",
+            title     = "Gallery & File Manager Access",
+            rationale = "DocScan AI needs access to your gallery and files to import documents, images, and PDFs.",
             onAllow   = { showRationaleDialog = false; permState.launchRequest() },
             onDismiss = { showRationaleDialog = false },
         )
@@ -184,8 +185,8 @@ fun GalleryImportScreen(
     if (showDeniedDialog) {
         PermissionDeniedDialog(
             icon      = Icons.Default.PhotoLibrary,
-            title     = "Storage Access Blocked",
-            message   = "Storage access was denied. Open Settings and allow storage access to import files.",
+            title     = "Access Blocked",
+            message   = "Gallery and file access was denied. Open Settings and allow storage access to import files.",
             onDismiss = { showDeniedDialog = false },
         )
     }
@@ -199,7 +200,7 @@ fun GalleryImportScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -329,7 +330,7 @@ fun GalleryImportScreen(
                             when (permState.status) {
                                 PermissionStatus.ShowRationale     -> showRationaleDialog = true
                                 PermissionStatus.PermanentlyDenied -> showDeniedDialog = true
-                                else -> permState.launchRequest()
+                                PermissionStatus.Granted -> permState.launchRequest()
                             }
                         }
                     )
@@ -444,7 +445,7 @@ private fun fileVisuals(mime: String): Triple<ImageVector, Color, Color> {
             mime.contains("spreadsheet") ||
             mime.contains("excel")        -> Triple(Icons.Default.TableChart,   tertiary,  MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
         mime.startsWith("image/")         -> Triple(Icons.Default.Image,         primary,   MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
-        else                              -> Triple(Icons.Default.InsertDriveFile, secondary, MaterialTheme.colorScheme.surfaceContainerHigh)
+        else                              -> Triple(Icons.AutoMirrored.Filled.InsertDriveFile, secondary, MaterialTheme.colorScheme.surfaceContainerHigh)
     }
 }
 
@@ -479,7 +480,7 @@ private fun PermissionPromptGrid(onGrantPermission: () -> Unit) {
             ) {
                 Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(40.dp))
             }
-            Text("Allow File Access", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text("Allow Gallery & File Access", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
             Text(
                 "Grant storage access to browse photos, PDFs, Word documents, text files, and more.",
                 style     = MaterialTheme.typography.bodySmall,

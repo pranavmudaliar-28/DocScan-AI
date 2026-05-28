@@ -53,6 +53,12 @@ fun DocumentViewerScreen(
     var offsetY by remember { mutableFloatStateOf(0f) }
     val clampedScale = scale.coerceIn(0.5f, 4f)
 
+    var docName by remember { mutableStateOf("Loading...") }
+    LaunchedEffect(docId) {
+        val existing = com.example.docscanai.data.ScanHistoryRepository.findById(docId)
+        docName = existing?.name ?: "Document Viewer"
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -113,21 +119,7 @@ fun DocumentViewerScreen(
             }
         }
 
-        // Floating Scrollbar
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp)
-                .background(Color.White, RoundedCornerShape(16.dp))
-                .padding(vertical = 12.dp, horizontal = 8.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.KeyboardArrowUp, null, tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
-                Text("4", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF0F172A))
-                Text("12", fontSize = 12.sp, color = Color(0xFF94A3B8))
-                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
-            }
-        }
+
 
         // Top bar
         Surface(
@@ -146,9 +138,9 @@ fun DocumentViewerScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
                     }
-                    Column {
-                        Text("Q4 Vendor Agreement", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
-                        Text("PDF · 12 PAGES · 4.2 MB", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 0.5.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(docName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("DOCUMENT · 1 PAGE", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 0.5.sp)
                     }
                 }
                 Row {
@@ -162,46 +154,13 @@ fun DocumentViewerScreen(
             }
         }
 
-        // Bottom controls + AI summary
+        // Bottom controls
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
         ) {
-            // AI Summary card
-            var showAiCard by remember { mutableStateOf(true) }
-            if (showAiCard) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    shadowElevation = 2.dp
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Surface(color = Color(0xFFEFF6FF), shape = RoundedCornerShape(4.dp)) {
-                                Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(12.dp))
-                                    Text("AI SUMMARY", fontSize = 10.sp, color = Color(0xFF3B82F6), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                                }
-                            }
-                        }
-                        Text(
-                            "12-page MSA between Acme Co. and Northwind. Key terms: Net 30 payment, 5-year confidentiality, scope defined in Exhibit A.\nAction: requires signature on page 11.",
-                            fontSize = 14.sp,
-                            color = Color(0xFF334155),
-                            lineHeight = 20.sp
-                        )
-                    }
-                }
-            }
-
-            // Bottom Navigation Bar
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.background,
@@ -211,34 +170,9 @@ fun DocumentViewerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Toolbar items
-                    val items = listOf(
-                        Icons.Default.ZoomIn to "Zoom",
-                        Icons.Default.TextFields to "Annotate",
-                        Icons.Default.AutoFixHigh to "Cleanup",
-                        Icons.Default.SwapHoriz to "Convert"
-                    )
-                    
-                    items.forEach { (icon, label) ->
-                        val isSelected = label == "Cleanup"
-                        val color = if (isSelected) Color(0xFF3B82F6) else Color(0xFF64748B)
-                        
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { }) {
-                            Box {
-                                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
-                                if (isSelected) {
-                                    Box(modifier = Modifier.size(6.dp).background(color, RoundedCornerShape(3.dp)).align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp))
-                                }
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            Text(label, fontSize = 11.sp, color = color, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal)
-                        }
-                    }
-                    
-                    // Edit button
                     Button(
                         onClick = onEdit,
                         shape = RoundedCornerShape(12.dp),

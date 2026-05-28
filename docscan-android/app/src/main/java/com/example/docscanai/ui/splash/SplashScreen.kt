@@ -59,10 +59,12 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         onSplashComplete()
     }
 
+    val onBackgroundColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(NavyLight, NavyDark))),
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
         // Particle dots
@@ -86,13 +88,13 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         // Concentric rings
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color  = Color.White.copy(alpha = 0.05f),
+                color  = onBackgroundColor.copy(alpha = 0.05f),
                 radius = 130.dp.toPx(),
                 center = center,
                 style  = Stroke(1.dp.toPx()),
             )
             drawCircle(
-                color  = Color.White.copy(alpha = 0.03f),
+                color  = onBackgroundColor.copy(alpha = 0.03f),
                 radius = 210.dp.toPx(),
                 center = center,
                 style  = Stroke(1.dp.toPx()),
@@ -107,8 +109,8 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
             Surface(
                 modifier        = Modifier.size(140.dp),
                 shape           = RoundedCornerShape(28.dp),
-                color           = Color.White.copy(alpha = 0.06f),
-                border          = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                color           = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                border          = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)),
                 shadowElevation = 0.dp,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -121,13 +123,13 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
 
                         // Document card
                         drawRoundRect(
-                            color        = Color.White.copy(alpha = 0.08f),
+                            color        = onBackgroundColor.copy(alpha = 0.08f),
                             topLeft      = Offset(dl, dt),
                             size         = Size(dw, dh),
                             cornerRadius = cr,
                         )
                         drawRoundRect(
-                            color        = Color.White.copy(alpha = 0.20f + 0.10f * glowPulse),
+                            color        = onBackgroundColor.copy(alpha = 0.20f + 0.10f * glowPulse),
                             topLeft      = Offset(dl, dt),
                             size         = Size(dw, dh),
                             cornerRadius = cr,
@@ -198,7 +200,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
                     "DocScan",
                     fontSize   = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color      = Color.White,
+                    color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     " AI",
@@ -213,7 +215,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
             Text(
                 "Intelligent Document Scanner",
                 fontSize      = 13.sp,
-                color         = Color.White.copy(alpha = textAlpha.value * 0.60f),
+                color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = textAlpha.value * 0.60f),
                 letterSpacing = 0.5.sp,
                 textAlign     = TextAlign.Center,
             )
@@ -233,7 +235,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
                             .clip(CircleShape)
                             .background(
                                 if (i == 1) AIGlow.copy(alpha = 0.8f + 0.2f * glowPulse)
-                                else Color.White.copy(alpha = 0.35f)
+                                else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
                             ),
                     )
                 }
@@ -244,7 +246,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
             Text(
                 "INITIALIZING · OCR ENGINE v4.2",
                 fontSize      = 10.sp,
-                color         = Color.White.copy(alpha = textAlpha.value * 0.35f),
+                color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = textAlpha.value * 0.35f),
                 letterSpacing = 1.sp,
                 fontFamily    = FontFamily.Monospace,
                 textAlign     = TextAlign.Center,

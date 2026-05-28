@@ -79,6 +79,14 @@ fun galleryPermission(): String =
     else
         android.Manifest.permission.READ_EXTERNAL_STORAGE
 
+fun cameraPermission(): String = android.Manifest.permission.CAMERA
+
+fun fileManagerPermission(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        android.Manifest.permission.READ_MEDIA_IMAGES
+    else
+        android.Manifest.permission.READ_EXTERNAL_STORAGE
+
 // ── Rationale dialog (used by Gallery screen) ─────────────────────────────────
 
 @Composable

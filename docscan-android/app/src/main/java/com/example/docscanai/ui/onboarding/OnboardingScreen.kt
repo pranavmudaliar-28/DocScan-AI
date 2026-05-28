@@ -126,7 +126,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50.dp))
-                        .background(DeepNavy)
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable {
                             if (isLast) onFinish()
                             else scope.launch {
@@ -143,12 +143,12 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             if (isLast) "Get Started" else "Continue",
                             fontSize   = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color      = androidx.compose.ui.graphics.Color.White,
+                            color      = MaterialTheme.colorScheme.onPrimary,
                         )
                         Icon(
                             Icons.Default.ArrowForward,
                             contentDescription = null,
-                            tint     = androidx.compose.ui.graphics.Color.White,
+                            tint     = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(16.dp),
                         )
                     }

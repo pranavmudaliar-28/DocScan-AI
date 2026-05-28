@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,11 +39,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun PasswordResetScreen(onBack: () -> Unit, onResetComplete: () -> Unit) {
     var step by remember { mutableIntStateOf(1) }
+    var userEmail by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0F2240))))
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding(),
     ) {
         // Particle dots
@@ -69,7 +71,7 @@ fun PasswordResetScreen(onBack: () -> Unit, onResetComplete: () -> Unit) {
                 IconButton(onClick = {
                     if (step > 1) step-- else onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White.copy(alpha = 0.8f))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f))
                 }
                 Row(
                     modifier              = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -81,7 +83,7 @@ fun PasswordResetScreen(onBack: () -> Unit, onResetComplete: () -> Unit) {
                                 .weight(1f).height(3.dp)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(
-                                    if (i < step) AIGlow else Color.White.copy(alpha = 0.20f)
+                                    if (i < step) AIGlow else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f)
                                 )
                         )
                     }
@@ -90,8 +92,8 @@ fun PasswordResetScreen(onBack: () -> Unit, onResetComplete: () -> Unit) {
             }
 
             when (step) {
-                1 -> ResetStep1(onNext = { step = 2 })
-                2 -> ResetStep2(onNext = { step = 3 })
+                1 -> ResetStep1(onNext = { email -> userEmail = email; step = 2 })
+                2 -> ResetStep2(email = userEmail, onNext = { step = 3 })
                 3 -> ResetStep3(onNext = { step = 4 })
                 4 -> ResetStep4(onDone = onResetComplete)
             }
@@ -100,10 +102,11 @@ fun PasswordResetScreen(onBack: () -> Unit, onResetComplete: () -> Unit) {
 }
 
 @Composable
-private fun ResetStep1(onNext: () -> Unit) {
+private fun ResetStep1(onNext: (String) -> Unit) {
     var email     by remember { mutableStateOf("") }
     val scope     = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var error     by remember { mutableStateOf<String?>(null) }
 
     StepContent(
         stepLabel = "01 / 04",
@@ -113,18 +116,41 @@ private fun ResetStep1(onNext: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ResetDarkField(
                 value         = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; error = null },
                 label         = "Email address",
-                leadingIcon   = { Icon(Icons.Default.Email, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+                leadingIcon   = { Icon(Icons.Default.Email, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
             )
+            
+            if (error != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFDC2626).copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFF87171), modifier = Modifier.size(16.dp))
+                    Text(error!!, color = Color(0xFFF87171), fontSize = 13.sp)
+                }
+            }
+
             GradientButton(
                 text      = "Send code →",
                 isLoading = isLoading,
                 onClick   = {
                     if (email.isNotBlank()) {
                         isLoading = true
-                        scope.launch { delay(800); isLoading = false; onNext() }
+                        error = null
+                        scope.launch { 
+                            val trimmedEmail = email.trim()
+                            com.example.docscanai.data.AuthRepository.resetPasswordForEmail(trimmedEmail).fold(
+                                onSuccess = { isLoading = false; onNext(trimmedEmail) },
+                                onFailure = { e -> isLoading = false; error = e.message ?: "Failed to send reset email. Make sure the email exists." }
+                            )
+                        }
                     }
                 },
             )
@@ -133,9 +159,11 @@ private fun ResetStep1(onNext: () -> Unit) {
 }
 
 @Composable
-private fun ResetStep2(onNext: () -> Unit) {
+private fun ResetStep2(email: String, onNext: () -> Unit) {
     var resendCooldown by remember { mutableIntStateOf(60) }
     val scope          = rememberCoroutineScope()
+    var isLoading      by remember { mutableStateOf(false) }
+    var error          by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (resendCooldown > 0) { delay(1000); resendCooldown-- }
@@ -165,8 +193,8 @@ private fun ResetStep2(onNext: () -> Unit) {
                                 .size(46.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (char.isNotEmpty()) Color.White.copy(alpha = 0.12f)
-                                    else Color.White.copy(alpha = 0.06f)
+                                    if (char.isNotEmpty()) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -174,7 +202,7 @@ private fun ResetStep2(onNext: () -> Unit) {
                                 char.ifEmpty { "–" },
                                 fontSize   = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = if (char.isNotEmpty()) Color.White else Color.White.copy(alpha = 0.25f),
+                                color      = if (char.isNotEmpty()) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
                                 fontFamily = FontFamily.Monospace,
                             )
                         }
@@ -182,15 +210,45 @@ private fun ResetStep2(onNext: () -> Unit) {
                 }
                 BasicTextField(
                     value         = otp,
-                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) otp = it },
+                    onValueChange = { 
+                        if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                            otp = it
+                            error = null
+                        } 
+                    },
                     modifier      = Modifier
                         .matchParentSize()
                         .alpha(0f)
                         .focusRequester(focusRequester),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (otp.length == 6) onNext() }),
+                    keyboardActions = KeyboardActions(onDone = { 
+                        if (otp.length == 6) {
+                            isLoading = true
+                            scope.launch {
+                                com.example.docscanai.data.AuthRepository.verifyOtp(email, otp).fold(
+                                    onSuccess = { isLoading = false; onNext() },
+                                    onFailure = { e -> isLoading = false; error = e.message ?: "Invalid code." }
+                                )
+                            }
+                        }
+                    }),
                     decorationBox   = { it() },
                 )
+            }
+            
+            if (error != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFDC2626).copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFF87171), modifier = Modifier.size(16.dp))
+                    Text(error!!, color = Color(0xFFF87171), fontSize = 13.sp)
+                }
             }
 
             // Resend
@@ -198,20 +256,30 @@ private fun ResetStep2(onNext: () -> Unit) {
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text("Didn't receive it?", fontSize = 13.sp, color = Color.White.copy(alpha = 0.55f))
+                Text("Didn't receive it?", fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f))
                 Text(
                     if (resendCooldown > 0) "Resend in ${resendCooldown}s" else "Resend",
                     fontSize   = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color      = if (resendCooldown > 0) Color.White.copy(alpha = 0.35f) else AIGlow,
+                    color      = if (resendCooldown > 0) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f) else AIGlow,
                     modifier   = if (resendCooldown == 0) Modifier.clickable { resendCooldown = 60 } else Modifier,
                 )
             }
 
             GradientButton(
-                text    = "Verify →",
-                enabled = otp.length == 6,
-                onClick = { onNext() },
+                text      = "Verify →",
+                enabled   = otp.length == 6,
+                isLoading = isLoading,
+                onClick   = {
+                    isLoading = true
+                    error = null
+                    scope.launch {
+                        com.example.docscanai.data.AuthRepository.verifyOtp(email, otp).fold(
+                            onSuccess = { isLoading = false; onNext() },
+                            onFailure = { e -> isLoading = false; error = e.message ?: "Invalid code." }
+                        )
+                    }
+                },
             )
         }
     }
@@ -221,6 +289,9 @@ private fun ResetStep2(onNext: () -> Unit) {
 private fun ResetStep3(onNext: () -> Unit) {
     var password     by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
+    var isLoading    by remember { mutableStateOf(false) }
+    var error        by remember { mutableStateOf<String?>(null) }
+    val scope        = rememberCoroutineScope()
     val hasLength    = password.length >= 8
     val hasUpper     = password.any { it.isUpperCase() }
     val hasNumber    = password.any { it.isDigit() }
@@ -237,12 +308,12 @@ private fun ResetStep3(onNext: () -> Unit) {
                 value         = password,
                 onValueChange = { password = it },
                 label         = "New password",
-                leadingIcon   = { Icon(Icons.Default.Lock, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+                leadingIcon   = { Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
                 trailingIcon  = {
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
                             if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)
+                            null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)
                         )
                     }
                 },
@@ -251,7 +322,7 @@ private fun ResetStep3(onNext: () -> Unit) {
             )
 
             if (password.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.10f))) {
+                Box(modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f))) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(criteriasMet / 3f)
@@ -277,16 +348,41 @@ private fun ResetStep3(onNext: () -> Unit) {
                     Icon(Icons.Default.AutoAwesome, null, tint = AIGlow, modifier = Modifier.size(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("AI-generated suggestion", fontSize = 11.sp, color = AIGlow.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold)
-                        Text(suggestedPw, fontSize = 13.sp, color = Color.White.copy(alpha = 0.70f), fontFamily = FontFamily.Monospace)
+                        Text(suggestedPw, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.70f), fontFamily = FontFamily.Monospace)
                     }
                     Text("Use", fontSize = 11.sp, color = AIGlow, fontWeight = FontWeight.SemiBold)
                 }
             }
 
+            if (error != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFDC2626).copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFF87171), modifier = Modifier.size(16.dp))
+                    Text(error!!, color = Color(0xFFF87171), fontSize = 13.sp)
+                }
+            }
+
             GradientButton(
-                text    = "Set password →",
-                enabled = criteriasMet >= 2,
-                onClick = { onNext() },
+                text      = "Set password →",
+                enabled   = criteriasMet >= 2,
+                isLoading = isLoading,
+                onClick   = {
+                    isLoading = true
+                    error = null
+                    scope.launch {
+                        com.example.docscanai.data.AuthRepository.updatePassword(password).fold(
+                            onSuccess = { isLoading = false; onNext() },
+                            onFailure = { e -> isLoading = false; error = e.message ?: "Failed to update password." }
+                        )
+                    }
+                },
             )
         }
     }
@@ -320,12 +416,12 @@ private fun ResetStep4(onDone: () -> Unit) {
 
         Spacer(Modifier.height(28.dp))
 
-        Text("Password updated!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("Password updated!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(Modifier.height(8.dp))
         Text(
             "Your password has been reset. You can now sign in with your new password.",
             fontSize  = 14.sp,
-            color     = Color.White.copy(alpha = 0.65f),
+            color     = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
         )
 
@@ -359,8 +455,8 @@ private fun StepContent(
             letterSpacing = 0.5.sp,
         )
         Spacer(Modifier.height(8.dp))
-        Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(subtitle, fontSize = 13.sp, color = Color.White.copy(alpha = 0.60f), modifier = Modifier.padding(top = 6.dp, bottom = 32.dp))
+        Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.60f), modifier = Modifier.padding(top = 6.dp, bottom = 32.dp))
 
         content()
     }
@@ -409,7 +505,7 @@ private fun ResetDarkField(
         Text(
             label.uppercase(),
             fontSize      = 10.sp,
-            color         = Color.White.copy(alpha = 0.55f),
+            color         = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
             fontWeight    = FontWeight.Medium,
             letterSpacing = 1.sp,
             fontFamily    = FontFamily.Monospace,
@@ -422,12 +518,13 @@ private fun ResetDarkField(
             visualTransformation = visualTransformation,
             keyboardOptions      = keyboardOptions,
             singleLine           = true,
+            placeholder          = { Text("Enter ${label.lowercase()}", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 15.sp) },
             modifier             = Modifier.fillMaxWidth().height(52.dp),
-            textStyle            = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+            textStyle            = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
-                focusedContainerColor   = Color.White.copy(alpha = 0.08f),
-                unfocusedBorderColor    = Color.White.copy(alpha = 0.12f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                focusedContainerColor   = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
+                unfocusedBorderColor    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                 focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
                 cursorColor             = AIGlow,
             ),

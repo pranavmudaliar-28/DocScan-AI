@@ -10,11 +10,20 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.example.docscanai.ui.permission.PermissionDeniedDialog
+import com.example.docscanai.ui.permission.PermissionRationaleDialog
+import com.example.docscanai.ui.permission.PermissionStatus
+import com.example.docscanai.ui.permission.cameraPermission
+import com.example.docscanai.ui.permission.rememberAppPermissionState
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_PDF
@@ -62,8 +71,12 @@ fun CameraScanScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (!hasLaunched) {
+    val permState = rememberAppPermissionState(cameraPermission())
+    var showRationaleDialog by remember { mutableStateOf(false) }
+    var showDeniedDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(permState.status) {
+        if (!hasLaunched && permState.status == PermissionStatus.Granted) {
             hasLaunched = true
             val options = GmsDocumentScannerOptions.Builder()
                 .setGalleryImportAllowed(true)
@@ -89,13 +102,53 @@ fun CameraScanScreen(
         }
     }
 
-    // While the scanner activity is launching/running, show a loading placeholder
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
+    if (showRationaleDialog) {
+        PermissionRationaleDialog(
+            icon = Icons.Default.CameraAlt,
+            title = "Camera Access",
+            rationale = "DocScan AI needs access to your camera to scan documents.",
+            onAllow = { showRationaleDialog = false; permState.launchRequest() },
+            onDismiss = { showRationaleDialog = false; onBack() }
+        )
+    }
+
+    if (showDeniedDialog) {
+        PermissionDeniedDialog(
+            icon = Icons.Default.CameraAlt,
+            title = "Camera Access Blocked",
+            message = "Camera access was denied. Open Settings and allow camera access to scan documents.",
+            onDismiss = { showDeniedDialog = false; onBack() }
+        )
+    }
+
+    if (permState.status != PermissionStatus.Granted) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(16.dp))
+                Text("Camera Permission Required", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                Spacer(Modifier.height(8.dp))
+                Text("Please grant camera permission to scan documents.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(24.dp))
+                Button(onClick = {
+                    when (permState.status) {
+                        PermissionStatus.ShowRationale -> showRationaleDialog = true
+                        PermissionStatus.PermanentlyDenied -> showDeniedDialog = true
+                        else -> permState.launchRequest()
+                    }
+                }) {
+                    Text("Grant Permission")
+                }
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
     }
 }

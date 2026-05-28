@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -82,7 +83,7 @@ fun SignupScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0F2240))))
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
             .systemBarsPadding(),
     ) {
         // Particle dots
@@ -117,7 +118,7 @@ fun SignupScreen(
                 verticalAlignment     = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White.copy(alpha = 0.8f))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f))
                 }
                 // Step indicator
                 Row(
@@ -127,7 +128,7 @@ fun SignupScreen(
                     Text(
                         "Step 2 of 2",
                         fontSize      = 11.sp,
-                        color         = Color.White.copy(alpha = 0.50f),
+                        color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.50f),
                         fontFamily    = FontFamily.Monospace,
                         letterSpacing = 0.5.sp,
                     )
@@ -144,7 +145,7 @@ fun SignupScreen(
                     modifier = Modifier
                         .weight(1f).height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.30f))
+                        .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f))
                 )
                 Box(
                     modifier = Modifier
@@ -181,21 +182,21 @@ fun SignupScreen(
                 "Create your AI workspace",
                 fontSize      = 26.sp,
                 fontWeight    = FontWeight.Bold,
-                color         = Color.White,
+                color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                 letterSpacing = (-0.5).sp,
             )
             Text(
                 "Join DocScan AI and unlock intelligent scanning",
                 fontSize = 13.sp,
-                color    = Color.White.copy(alpha = 0.60f),
+                color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.60f),
                 modifier = Modifier.padding(top = 6.dp, bottom = 22.dp),
             )
 
             // Glass card
             Surface(
                 shape  = RoundedCornerShape(24.dp),
-                color  = Color.White.copy(alpha = 0.06f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                color  = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)),
                 shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -206,7 +207,7 @@ fun SignupScreen(
                         value         = name,
                         onValueChange = { name = it; error = null },
                         label         = "Full Name",
-                        leadingIcon   = { Icon(Icons.Default.Person, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+                        leadingIcon   = { Icon(Icons.Default.Person, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType   = KeyboardType.Text,
                             imeAction      = ImeAction.Next,
@@ -219,7 +220,7 @@ fun SignupScreen(
                         value         = email,
                         onValueChange = { email = it; error = null },
                         label         = "Work Email",
-                        leadingIcon   = { Icon(Icons.Default.Email, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+                        leadingIcon   = { Icon(Icons.Default.Email, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                     )
 
@@ -229,13 +230,13 @@ fun SignupScreen(
                             value         = password,
                             onValueChange = { password = it; error = null },
                             label         = "Password",
-                            leadingIcon   = { Icon(Icons.Default.Lock, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+                            leadingIcon   = { Icon(Icons.Default.Lock, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
                             trailingIcon  = {
                                 IconButton(onClick = { showPassword = !showPassword }) {
                                     Icon(
                                         if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         contentDescription = if (showPassword) "Hide" else "Show",
-                                        tint = Color.White.copy(alpha = 0.5f),
+                                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -252,7 +253,7 @@ fun SignupScreen(
                                     .fillMaxWidth()
                                     .height(3.dp)
                                     .clip(RoundedCornerShape(2.dp))
-                                    .background(Color.White.copy(alpha = 0.10f))
+                                    .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f))
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -285,13 +286,13 @@ fun SignupScreen(
                                         Icon(
                                             if (met) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                             null,
-                                            tint     = if (met) Color(0xFF16A34A) else Color.White.copy(alpha = 0.30f),
+                                            tint     = if (met) Color(0xFF16A34A) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f),
                                             modifier = Modifier.size(13.dp),
                                         )
                                         Text(
                                             label,
                                             fontSize = 11.sp,
-                                            color    = if (met) Color.White.copy(alpha = 0.80f) else Color.White.copy(alpha = 0.40f),
+                                            color    = if (met) androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.80f) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.40f),
                                         )
                                     }
                                 }
@@ -338,7 +339,7 @@ fun SignupScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Text("Create account", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                                Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -349,9 +350,9 @@ fun SignupScreen(
 
             // OR divider
             Row(verticalAlignment = Alignment.CenterVertically) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.20f))
-                Text("  OR  ", fontSize = 12.sp, color = Color.White.copy(alpha = 0.40f))
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.20f))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f))
+                Text("  OR  ", fontSize = 12.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.40f))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.20f))
             }
 
             Spacer(Modifier.height(16.dp))
@@ -369,9 +370,9 @@ fun SignupScreen(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Text("Already have an account?", fontSize = 14.sp, color = Color.White.copy(alpha = 0.55f))
+                Text("Already have an account?", fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f))
                 TextButton(onClick = onBack) {
-                    Text("Sign In", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text("Sign In", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 }
             }
 
@@ -394,14 +395,14 @@ private fun DarkField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            label.uppercase(),
-            fontSize      = 10.sp,
-            color         = Color.White.copy(alpha = 0.55f),
-            fontWeight    = FontWeight.Medium,
-            letterSpacing = 1.sp,
-            fontFamily    = FontFamily.Monospace,
-        )
+    Text(
+        label.uppercase(),
+        fontSize      = 10.sp,
+        color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+        fontWeight    = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        fontFamily    = FontFamily.Monospace,
+    )
         OutlinedTextField(
             value                = value,
             onValueChange        = onValueChange,
@@ -411,13 +412,13 @@ private fun DarkField(
             keyboardOptions      = keyboardOptions,
             keyboardActions      = keyboardActions,
             singleLine           = true,
-            placeholder          = { Text(label, color = Color.White.copy(alpha = 0.3f), fontSize = 15.sp) },
+            placeholder          = { Text("Enter ${label.lowercase()}", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 15.sp) },
             modifier             = Modifier.fillMaxWidth().height(52.dp),
-            textStyle            = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+            textStyle            = androidx.compose.ui.text.TextStyle(color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground, fontSize = 15.sp),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
-                focusedContainerColor   = Color.White.copy(alpha = 0.08f),
-                unfocusedBorderColor    = Color.White.copy(alpha = 0.12f),
+                unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
+                focusedContainerColor   = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
+                unfocusedBorderColor    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                 focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
                 cursorColor             = AIGlow,
             ),

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">DocScan AI</string>
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan Document</string>
 </resources>

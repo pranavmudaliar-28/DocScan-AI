@@ -18,3 +18,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object AppSettings : NavKey
 @Serializable data object Search : NavKey
 @Serializable data object PasswordReset : NavKey
+@Serializable data object PrivacyPolicy : NavKey
+@Serializable data object TermsAndConditions : NavKey

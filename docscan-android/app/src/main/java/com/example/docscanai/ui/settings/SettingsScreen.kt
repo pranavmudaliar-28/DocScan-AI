@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +38,8 @@ import com.example.docscanai.ui.theme.IntelligentBlue
 fun SettingsScreen(
     onBack: () -> Unit,
     onViewOnboarding: () -> Unit,
+    onPrivacyPolicy: () -> Unit,
+    onTermsAndConditions: () -> Unit,
     onSignOut: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -51,9 +54,8 @@ fun SettingsScreen(
     val autoSync         by AppSettingsRepository.autoSync.collectAsStateWithLifecycle()
     val wifiOnlySync     by AppSettingsRepository.wifiOnlySync.collectAsStateWithLifecycle()
 
-    fun notImplemented() {
-        Toast.makeText(context, "Coming soon!", Toast.LENGTH_SHORT).show()
-    }
+    val themeMode by AppThemeRepository.themeMode.collectAsStateWithLifecycle()
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
@@ -66,7 +68,7 @@ fun SettingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -105,38 +107,12 @@ fun SettingsScreen(
                             onCheckedChange = { AppSettingsRepository.setSetting(context, "autoDetect", it) }
                         )
                         SettingsDivider()
-                        SettingsNavRow(
-                            icon     = Icons.Default.PhotoSizeSelectLarge,
-                            label    = "Default Format",
-                            subtitle = "JPEG · PDF · PNG",
-                            onClick  = { notImplemented() }
-                        )
-                    }
-                }
-
-                // Export Settings
-                item {
-                    SettingsSection(title = "Export Settings") {
-                        SettingsNavRow(
-                            icon     = Icons.Default.FolderOpen,
-                            label    = "Save Location",
-                            subtitle = "Documents / DocScan AI",
-                            onClick  = { notImplemented() }
-                        )
-                        SettingsDivider()
                         SettingsToggleRow(
                             icon     = Icons.Default.Info,
                             label    = "Include Metadata",
                             subtitle = "Embed scan date and settings in file",
                             checked  = saveMetadata,
                             onCheckedChange = { AppSettingsRepository.setSetting(context, "saveMetadata", it) }
-                        )
-                        SettingsDivider()
-                        SettingsNavRow(
-                            icon     = Icons.Default.PictureAsPdf,
-                            label    = "PDF Compression",
-                            subtitle = "Balanced",
-                            onClick  = { notImplemented() }
                         )
                     }
                 }
@@ -160,15 +136,8 @@ fun SettingsScreen(
                             onCheckedChange = { AppSettingsRepository.setSetting(context, "autoCleanup", it) }
                         )
                         SettingsDivider()
-                        SettingsNavRow(
-                            icon     = Icons.Default.Language,
-                            label    = "OCR Language",
-                            subtitle = "English",
-                            onClick  = { notImplemented() }
-                        )
-                        SettingsDivider()
                         SettingsToggleRow(
-                            icon     = Icons.Default.Label,
+                            icon     = Icons.AutoMirrored.Filled.Label,
                             label    = "Smart Tagging",
                             subtitle = "Automatically tag documents by content type",
                             checked  = smartTagging,
@@ -195,24 +164,22 @@ fun SettingsScreen(
                             checked  = wifiOnlySync,
                             onCheckedChange = { AppSettingsRepository.setSetting(context, "wifiOnlySync", it) }
                         )
-                        SettingsDivider()
-                        SettingsNavRow(
-                            icon     = Icons.Default.Storage,
-                            label    = "Storage Used",
-                            subtitle = "Tap to view usage details",
-                            onClick  = { notImplemented() }
-                        )
                     }
                 }
 
                 // Appearance
                 item {
                     SettingsSection(title = "Appearance") {
+                        val subtitle = when(themeMode) {
+                            com.example.docscanai.data.ThemeMode.SYSTEM_DEFAULT -> "System Default"
+                            com.example.docscanai.data.ThemeMode.LIGHT -> "Light Mode"
+                            com.example.docscanai.data.ThemeMode.DARK -> "Dark Mode"
+                        }
                         SettingsNavRow(
                             icon     = Icons.Default.DarkMode,
                             label    = "Theme",
-                            subtitle = "Follows system dark/light mode automatically",
-                            onClick  = { }
+                            subtitle = subtitle,
+                            onClick  = { showThemeDialog = true }
                         )
                         SettingsDivider()
                         SettingsToggleRow(
@@ -235,39 +202,15 @@ fun SettingsScreen(
                         )
                         SettingsDivider()
                         SettingsNavRow(
-                            icon    = Icons.Default.HelpOutline,
-                            label   = "Help Center",
-                            onClick = { notImplemented() }
-                        )
-                        SettingsDivider()
-                        SettingsNavRow(
-                            icon    = Icons.Default.Security,
+                            icon    = Icons.Default.PrivacyTip,
                             label   = "Privacy Policy",
-                            onClick = { notImplemented() }
+                            onClick = onPrivacyPolicy
                         )
                         SettingsDivider()
                         SettingsNavRow(
-                            icon    = Icons.Default.Description,
-                            label   = "Terms of Service",
-                            onClick = { notImplemented() }
-                        )
-                    }
-                }
-
-                // About
-                item {
-                    SettingsSection(title = "About") {
-                        SettingsNavRow(
-                            icon     = Icons.Default.Info,
-                            label    = "Version",
-                            subtitle = "1.0.0 (build 1)",
-                            onClick  = { notImplemented() }
-                        )
-                        SettingsDivider()
-                        SettingsNavRow(
-                            icon     = Icons.Default.SystemUpdate,
-                            label    = "Check for Updates",
-                            onClick  = { notImplemented() }
+                            icon    = Icons.Default.Gavel,
+                            label   = "Terms & Conditions",
+                            onClick = onTermsAndConditions
                         )
                     }
                 }
@@ -282,7 +225,7 @@ fun SettingsScreen(
                             shape    = MaterialTheme.shapes.large,
                             border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
                         ) {
-                            Icon(Icons.Default.Logout, null,
+                            Icon(Icons.AutoMirrored.Filled.Logout, null,
                                 tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Sign Out", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
@@ -291,6 +234,55 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Choose Theme", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            AppThemeRepository.setThemeMode(context, com.example.docscanai.data.ThemeMode.SYSTEM_DEFAULT)
+                            showThemeDialog = false
+                        }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = themeMode == com.example.docscanai.data.ThemeMode.SYSTEM_DEFAULT, onClick = null)
+                        Spacer(Modifier.width(16.dp))
+                        Text("System Default", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            AppThemeRepository.setThemeMode(context, com.example.docscanai.data.ThemeMode.LIGHT)
+                            showThemeDialog = false
+                        }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = themeMode == com.example.docscanai.data.ThemeMode.LIGHT, onClick = null)
+                        Spacer(Modifier.width(16.dp))
+                        Text("Light Mode", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            AppThemeRepository.setThemeMode(context, com.example.docscanai.data.ThemeMode.DARK)
+                            showThemeDialog = false
+                        }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = themeMode == com.example.docscanai.data.ThemeMode.DARK, onClick = null)
+                        Spacer(Modifier.width(16.dp))
+                        Text("Dark Mode", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showThemeDialog = false }) { Text("Cancel") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 }
 

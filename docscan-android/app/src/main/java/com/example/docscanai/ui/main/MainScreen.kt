@@ -5,13 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Home
@@ -41,14 +41,14 @@ import com.example.docscanai.data.AuthRepository
 import com.example.docscanai.data.DefaultDataRepository
 import com.example.docscanai.data.ScanRecord
 import com.example.docscanai.ui.theme.AIGlow
-import com.example.docscanai.ui.theme.DeepNavy
 import com.example.docscanai.ui.theme.IntelligentBlue
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+private val dateFormat: SimpleDateFormat
+    get() = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
 private val ScanCyan   = Color(0xFF06B6D4)
 
 private fun greeting(): String {
@@ -66,9 +66,9 @@ fun MainScreen(
     onGallery: () -> Unit,
     onSettings: () -> Unit,
     onConvert: () -> Unit,
-    onSearch: () -> Unit = {},
     onScanItem: (ScanRecord) -> Unit,
     modifier: Modifier = Modifier,
+    onSearch: () -> Unit = {},
     viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -78,6 +78,7 @@ fun MainScreen(
 
     HomeScreen(
         recentScans = recentScans,
+        modifier    = modifier,
         onScan      = onScan,
         onGallery   = onGallery,
         onSettings  = onSettings,
@@ -90,18 +91,18 @@ fun MainScreen(
 @Composable
 internal fun HomeScreen(
     recentScans: List<ScanRecord>,
+    modifier: Modifier = Modifier,
     onScan: () -> Unit = {},
     onGallery: () -> Unit = {},
     onSettings: () -> Unit = {},
     onConvert: () -> Unit = {},
     onSearch: () -> Unit = {},
     onScanItem: (ScanRecord) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     var selectedTab  by remember { mutableIntStateOf(0) }
-    var showHeroCard by remember { mutableStateOf(true) }
 
     Scaffold(
+        modifier = modifier,
         bottomBar = {
             Column {
                 com.example.docscanai.ui.ads.AdMobBanner()
@@ -119,7 +120,7 @@ internal fun HomeScreen(
                 )
             }
         },
-        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
@@ -139,13 +140,6 @@ internal fun HomeScreen(
                 ) {
                     item { AvatarHeader(onSettings = onSettings) }
 
-                if (showHeroCard) {
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        AiHeroCard(onDismiss = { showHeroCard = false })
-                    }
-                }
-
                 item {
                     Spacer(Modifier.height(20.dp))
                     QuickActionsGrid(
@@ -155,22 +149,11 @@ internal fun HomeScreen(
                     )
                 }
 
-                if (recentScans.isNotEmpty()) {
-                    item {
-                        Spacer(Modifier.height(20.dp))
-                        ContinueEditingSection(
-                            scans      = recentScans.take(5),
-                            onScanItem = onScanItem,
-                        )
-                    }
-                }
-
                 item {
                     Spacer(Modifier.height(20.dp))
                     RecentScansSection(
                         scans      = recentScans,
                         onScanItem = onScanItem,
-                        onScan     = onScan,
                     )
                 }
             }
@@ -185,11 +168,10 @@ private fun FilesTab(
     onScanItem: (ScanRecord) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     
     LazyColumn(
-        modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background),
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -204,24 +186,24 @@ private fun FilesTab(
                     "Files",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.size(40.dp).clickable { }
                     ) {
-                        Icon(Icons.Default.Sort, null, modifier = Modifier.padding(10.dp), tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.size(40.dp).clickable { }
                     ) {
-                        Icon(Icons.Default.GridView, null, modifier = Modifier.padding(10.dp), tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.Default.GridView, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -235,118 +217,30 @@ private fun FilesTab(
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 placeholder = { 
                     Text("Search files, text inside docs...", 
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
                         fontSize = 15.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     ) 
                 },
                 leadingIcon = {
-                    Icon(Icons.Outlined.Search, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                 },
                 trailingIcon = {
-                    Icon(Icons.Default.Mic, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Mic, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                 },
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                    focusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                    unfocusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     focusedBorderColor = IntelligentBlue
                 ),
                 singleLine = true
             )
         }
 
-        // Filter Chips
-        item {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.clickable { }
-                    ) {
-                        Text("All", color = androidx.compose.material3.MaterialTheme.colorScheme.surface, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    }
-                }
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.clickable { }
-                    ) {
-                        Text("Recent", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    }
-                }
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.clickable { }
-                    ) {
-                        Text("Favorites", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    }
-                }
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = IntelligentBlue,
-                        modifier = Modifier.clickable { }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.surface, modifier = Modifier.size(14.dp))
-                            Text("AI tagged", color = androidx.compose.material3.MaterialTheme.colorScheme.surface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-            }
-        }
 
-        // Folders Section
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "FOLDERS",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        letterSpacing = 1.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    Text(
-                        "+ New",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = IntelligentBlue,
-                        modifier = Modifier.clickable { }
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    FolderCard(title = "Q4 Expenses", items = 23, color = Color(0xFFF59E0B), modifier = Modifier.weight(1f))
-                    FolderCard(title = "Contracts", items = 12, color = IntelligentBlue, modifier = Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    FolderCard(title = "Receipts · 2025", items = 87, color = Color(0xFF10B981), modifier = Modifier.weight(1f))
-                    FolderCard(title = "Personal", items = 9, color = Color(0xFF8B5CF6), modifier = Modifier.weight(1f))
-                }
-            }
-        }
 
         // Files Section
         item {
@@ -359,7 +253,7 @@ private fun FilesTab(
                     "FILES · ${scans.size.takeIf { it > 0 } ?: 142}",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     letterSpacing = 1.sp,
                     fontFamily = FontFamily.Monospace
                 )
@@ -368,22 +262,14 @@ private fun FilesTab(
 
         if (scans.isEmpty()) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilesTabScanItem(
-                        type = "PDF", typeColor = Color(0xFFEF4444),
-                        title = "Acme Co — MSA v3", subtitle = "24 pages · 4.2 MB",
-                        date = "Today", isStarred = true, hasAi = false
-                    )
-                    FilesTabScanItem(
-                        type = "SCAN", typeColor = ScanCyan,
-                        title = "Costco — receipt 1124", subtitle = "1 page · OCR done",
-                        date = "9:12 AM", isStarred = false, hasAi = true
-                    )
-                    FilesTabScanItem(
-                        type = "DOCX", typeColor = IntelligentBlue,
-                        title = "Proposal — Northwind", subtitle = "8 pages · 248 KB",
-                        date = "Yesterday", isStarred = true, hasAi = true
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Outlined.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(64.dp))
+                    Text("No scans yet", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Tap the scan or import button below to get started.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), textAlign = TextAlign.Center)
                 }
             }
         } else {
@@ -403,31 +289,7 @@ private fun FilesTab(
     }
 }
 
-@Composable
-private fun FolderCard(title: String, items: Int, color: Color, modifier: Modifier = Modifier) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
-        modifier = modifier.clickable { }
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(color.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.FolderOpen, null, tint = color, modifier = Modifier.size(22.dp))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("$items ITEMS", fontSize = 10.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
-            }
-        }
-    }
-}
+
 
 @Composable
 private fun FilesTabScanItem(
@@ -438,8 +300,8 @@ private fun FilesTabScanItem(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(
@@ -466,12 +328,12 @@ private fun FilesTabScanItem(
             
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (isStarred) {
                         Icon(Icons.Default.StarBorder, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
                     }
                 }
-                Text(subtitle, fontSize = 13.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -480,7 +342,7 @@ private fun FilesTabScanItem(
                 } else {
                     Spacer(Modifier.size(14.dp))
                 }
-                Text(date, fontSize = 12.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(date, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
         }
     }
@@ -513,114 +375,37 @@ private fun AvatarHeader(onSettings: () -> Unit) {
                     .clickable(onClick = onSettings),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(initials, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+                Text(initials, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
             }
             Column {
                 Text(
                     greeting(),
                     fontSize      = 13.sp,
-                    color         = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    color         = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     name,
                     fontSize   = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+                    color      = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
         
         Surface(
             shape = CircleShape,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.size(40.dp)
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(Icons.Outlined.Notifications, "Notifications", tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
-                Box(modifier = Modifier.padding(top = 8.dp, end = 10.dp).size(8.dp).background(Color(0xFFEF4444), CircleShape).align(Alignment.TopEnd).border(1.5.dp, androidx.compose.material3.MaterialTheme.colorScheme.surface, CircleShape))
+                Icon(Icons.Outlined.Notifications, "Notifications", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
+                Box(modifier = Modifier.padding(top = 8.dp, end = 10.dp).size(8.dp).background(Color(0xFFEF4444), CircleShape).align(Alignment.TopEnd).border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape))
             }
         }
     }
 }
 
-// ── AI Hero Card ──────────────────────────────────────────────────────────────
 
-@Composable
-private fun AiHeroCard(onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF1E3A8A), androidx.compose.material3.MaterialTheme.colorScheme.primary))),
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            // Badge
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.15f),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF93C5FD), modifier = Modifier.size(12.dp))
-                    Text(
-                        "AI ASSISTANT",
-                        fontSize      = 10.sp,
-                        color         = Color(0xFFE0E7FF),
-                        fontFamily    = FontFamily.Monospace,
-                        letterSpacing = 1.sp,
-                        fontWeight    = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "You have 3 receipts ready to\norganize into your Q4 expense\nfolder.",
-                fontSize   = 19.sp,
-                fontWeight = FontWeight.Bold,
-                color      = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                lineHeight = 26.sp
-            )
-
-            Spacer(Modifier.height(20.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.clickable {},
-                ) {
-                    Text(
-                        "Review",
-                        modifier   = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                        fontSize   = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-                Surface(
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.15f),
-                    border   = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
-                    modifier = Modifier.clickable(onClick = onDismiss),
-                ) {
-                    Text(
-                        "Dismiss",
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color    = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                    )
-                }
-            }
-        }
-    }
-}
 
 // ── Quick Actions Grid ────────────────────────────────────────────────────────
 
@@ -635,7 +420,7 @@ private fun QuickActionsGrid(
             "Quick actions",
             fontSize   = 18.sp,
             fontWeight = FontWeight.Bold,
-            color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+            color      = MaterialTheme.colorScheme.onBackground,
             modifier   = Modifier.padding(bottom = 16.dp),
         )
         Row(
@@ -659,17 +444,11 @@ private fun QuickActionsGrid(
             QuickActionItem(
                 icon     = Icons.AutoMirrored.Filled.CompareArrows,
                 label    = "Convert",
-                color    = Color(0xFF22C55E),
+                color    = Color(0xFF10B981),
                 modifier = Modifier.weight(1f),
                 onClick  = onConvert,
             )
-            QuickActionItem(
-                icon     = Icons.Default.AutoFixHigh,
-                label    = "Cleanup",
-                color    = Color(0xFFF59E0B),
-                modifier = Modifier.weight(1f),
-                onClick  = {},
-            )
+            Spacer(Modifier.weight(1f)) // keep spacing equal by filling empty space
         }
     }
 }
@@ -690,8 +469,8 @@ private fun QuickActionItem(
         Surface(
             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clickable(onClick = onClick),
             shape    = RoundedCornerShape(16.dp),
-            color    = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-            border   = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
+            color    = MaterialTheme.colorScheme.surface,
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Surface(shape = RoundedCornerShape(10.dp), color = color.copy(alpha = 0.1f), modifier = Modifier.size(44.dp)) {
@@ -705,122 +484,12 @@ private fun QuickActionItem(
             label,
             fontSize    = 13.sp,
             fontWeight  = FontWeight.Medium,
-            color       = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+            color       = MaterialTheme.colorScheme.onBackground,
             textAlign   = TextAlign.Center,
         )
     }
 }
 
-// ── Storage card ──────────────────────────────────────────────────────────────
-
-
-
-// ── Continue Editing ─────────────────────────────────────────────────────────
-
-@Composable
-private fun ContinueEditingSection(
-    scans: List<ScanRecord>,
-    onScanItem: (ScanRecord) -> Unit,
-) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Continue editing",
-                fontSize   = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                "See all",
-                fontSize = 14.sp,
-                color = Color(0xFF3B82F6),
-                fontWeight = FontWeight.Medium
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(scans, key = { it.id }) { record ->
-                ContinueEditCard(record = record, onClick = { onScanItem(record) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun ContinueEditCard(record: ScanRecord, onClick: () -> Unit) {
-    val progress = remember { (30..80).random() / 100f }
-    val isPdf = record.id.startsWith("gallery_")
-    val fileType = if (isPdf) "PDF" else "DOCX"
-    val typeColor = if (isPdf) Color(0xFFEF4444) else Color(0xFF3B82F6)
-
-    Surface(
-        modifier = Modifier.width(160.dp).clickable(onClick = onClick),
-        shape    = RoundedCornerShape(16.dp),
-        color    = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-        border   = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Document Placeholder Graphic
-            Box(modifier = Modifier.fillMaxWidth().height(80.dp).border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)).padding(10.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(modifier = Modifier.fillMaxWidth(0.8f).height(4.dp).background(androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp)))
-                    Box(modifier = Modifier.fillMaxWidth(0.6f).height(4.dp).background(androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp)))
-                    Spacer(Modifier.height(4.dp))
-                    Box(modifier = Modifier.fillMaxWidth(0.5f).height(6.dp).background(Color(0xFFBFDBFE), RoundedCornerShape(3.dp)))
-                }
-                
-                // Badge
-                Text(
-                    fileType,
-                    fontSize = 9.sp,
-                    color = typeColor,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
-                
-                // Progress Bar overlay on bottom of document
-                Box(modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant)) {
-                    Box(modifier = Modifier.fillMaxWidth(progress).height(3.dp).background(Color(0xFF3B82F6)))
-                }
-            }
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Text(
-                if (isPdf) "MSA v3" else "Northwind",
-                fontSize   = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                if (isPdf) "OCR REVIEW · ${(progress*100).toInt()}%" else "DRAFTING · ${(progress*100).toInt()}%",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                color    = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 0.5.sp
-            )
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (isPdf) "4 min ago" else "32 min ago",
-                    fontSize = 12.sp,
-                    color    = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
-                Surface(shape = CircleShape, color = Color(0xFF3B82F6), modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.PlayArrow, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.surface, modifier = Modifier.padding(6.dp))
-                }
-            }
-        }
-    }
-}
 
 // ── Recent scans ──────────────────────────────────────────────────────────────
 
@@ -828,7 +497,6 @@ private fun ContinueEditCard(record: ScanRecord, onClick: () -> Unit) {
 private fun RecentScansSection(
     scans: List<ScanRecord>,
     onScanItem: (ScanRecord) -> Unit,
-    onScan: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
         Row(
@@ -842,7 +510,7 @@ private fun RecentScansSection(
                     "This week",
                     fontSize   = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color      = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+                    color      = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
@@ -956,12 +624,12 @@ private fun ScanItem(record: ScanRecord, onClick: () -> Unit) {
 
 // ── Bottom Tab Bar ────────────────────────────────────────────────────────────
 
-private val TabSelected: androidx.compose.ui.graphics.Color
-    @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-private val TabUnselected: androidx.compose.ui.graphics.Color
-    @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-private val TabDivider: androidx.compose.ui.graphics.Color
-    @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant
+private val TabSelected: Color
+    @Composable get() = MaterialTheme.colorScheme.onBackground
+private val TabUnselected: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+private val TabDivider: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 
 @Composable
 private fun MainTabBar(
@@ -981,7 +649,7 @@ private fun MainTabBar(
                     strokeWidth = 1.dp.toPx(),
                 )
             }
-            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier              = Modifier
@@ -1023,7 +691,7 @@ private fun MainTabBar(
                 Icon(
                     Icons.Default.CropFree,
                     contentDescription = "Scan",
-                    tint     = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    tint     = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.size(28.dp),
                 )
             }
