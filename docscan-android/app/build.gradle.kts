@@ -183,6 +183,9 @@ dependencies {
   implementation(libs.credentials)
   implementation(libs.credentials.play)
   implementation(libs.googleid)
+
+  // Image Cropper
+  implementation("com.vanniktech:android-image-cropper:4.6.0")
 }
 
 // ── Version bump tasks ────────────────────────────────────────────────────────
@@ -190,6 +193,7 @@ dependencies {
 // Increments versionCode by 1 and writes it back to version.properties.
 // Runs automatically before every assembleRelease / bundleRelease.
 tasks.register("bumpVersionCode") {
+    notCompatibleWithConfigurationCache("Reads and writes version.properties file directly")
     doFirst {
         val newCode = verCode + 1
         versionProps.setProperty("VERSION_CODE", newCode.toString())

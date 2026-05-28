@@ -196,12 +196,6 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Help & Support") {
                         SettingsNavRow(
-                            icon    = Icons.Default.School,
-                            label   = "View Tutorial",
-                            onClick = onViewOnboarding
-                        )
-                        SettingsDivider()
-                        SettingsNavRow(
                             icon    = Icons.Default.PrivacyTip,
                             label   = "Privacy Policy",
                             onClick = onPrivacyPolicy

@@ -120,63 +120,9 @@ fun SignupScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f))
                 }
-                // Step indicator
-                Row(
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        "Step 2 of 2",
-                        fontSize      = 11.sp,
-                        color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.50f),
-                        fontFamily    = FontFamily.Monospace,
-                        letterSpacing = 0.5.sp,
-                    )
-                }
-                Spacer(Modifier.size(48.dp))
             }
 
-            // Progress bar
-            Row(
-                modifier              = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f).height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f))
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f).height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(AIGlow)
-                )
-            }
 
-            // Pro trial badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100.dp))
-                    .background(AIGlow.copy(alpha = 0.15f))
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-            ) {
-                Row(
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(Icons.Default.AutoAwesome, null, tint = AIGlow, modifier = Modifier.size(12.dp))
-                    Text(
-                        "14-day Pro trial · cancel anytime",
-                        fontSize   = 11.sp,
-                        color      = AIGlow,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
 
             Text(
                 "Create your AI workspace",

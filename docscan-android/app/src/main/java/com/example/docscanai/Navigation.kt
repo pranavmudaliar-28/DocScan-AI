@@ -23,6 +23,9 @@ import com.example.docscanai.ui.convert.ConvertScreen
 import com.example.docscanai.ui.editor.TextEditScreen
 import com.example.docscanai.ui.viewer.DocumentEditScreen
 import com.example.docscanai.ui.viewer.DocumentViewerScreen
+import com.example.docscanai.ui.editor.ImageEditorScreen
+import com.example.docscanai.ui.viewer.PdfViewerScreen
+import com.example.docscanai.ui.viewer.GenericDocumentScreen
 
 import androidx.compose.runtime.LaunchedEffect
 
@@ -78,6 +81,7 @@ fun MainNavigation(startWithScan: Boolean = false) {
                         backStack.add(CameraScan)
                     }
                 }
+                val context = androidx.compose.ui.platform.LocalContext.current
                 MainScreen(
                     onScan     = { backStack.add(CameraScan) },
                     onGallery  = { backStack.add(GalleryImport) },
@@ -85,36 +89,52 @@ fun MainNavigation(startWithScan: Boolean = false) {
                     onConvert  = { backStack.add(Convert) },
                     onSearch   = { backStack.add(Search) },
                     onScanItem = { record ->
-                        backStack.add(DocumentViewer(docId = record.id, imageUri = record.imageUri))
+                        val uri = android.net.Uri.parse(record.imageUri)
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        if (mimeType.startsWith("image/")) {
+                            backStack.add(ImageEditor(imageUri = record.imageUri))
+                        } else if (mimeType == "application/pdf") {
+                            backStack.add(PdfViewer(fileUri = record.imageUri))
+                        } else {
+                            backStack.add(GenericDocument(fileUri = record.imageUri))
+                        }
                     },
                 )
             }
 
             entry<CameraScan> {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 CameraScanScreen(
                     onBack    = { backStack.removeLastOrNull() },
                     onGallery = { backStack.add(GalleryImport) },
                     onCapture = { uri: Uri ->
-                        backStack.add(
-                            ScanResult(
-                                scanId   = "scan_${System.currentTimeMillis()}",
-                                imageUri = uri.toString(),
-                            )
-                        )
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        if (mimeType.startsWith("image/")) {
+                            backStack.add(ImageEditor(imageUri = uri.toString()))
+                        } else if (mimeType == "application/pdf") {
+                            backStack.add(PdfViewer(fileUri = uri.toString()))
+                        } else {
+                            backStack.add(GenericDocument(fileUri = uri.toString()))
+                        }
                     },
                 )
             }
 
             entry<GalleryImport> {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 GalleryImportScreen(
                     onBack          = { backStack.removeLastOrNull() },
                     onImageSelected = { uri: Uri ->
-                        backStack.add(
-                            ScanResult(
-                                scanId   = "gallery_${System.currentTimeMillis()}",
-                                imageUri = uri.toString(),
-                            )
-                        )
+                        // Attempt to resolve MIME type to route correctly
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        
+                        if (mimeType.startsWith("image/")) {
+                            backStack.add(ImageEditor(imageUri = uri.toString()))
+                        } else if (mimeType == "application/pdf") {
+                            backStack.add(PdfViewer(fileUri = uri.toString()))
+                        } else {
+                            backStack.add(GenericDocument(fileUri = uri.toString()))
+                        }
                     },
                     onCamera = { backStack[backStack.lastIndex] = CameraScan },
                 )
@@ -140,6 +160,29 @@ fun MainNavigation(startWithScan: Boolean = false) {
                 )
             }
 
+            entry<ImageEditor> { key ->
+                ImageEditorScreen(
+                    imageUri = key.imageUri,
+                    onBack = { backStack.removeLastOrNull() },
+                    onExtractText = { uri -> backStack.add(TextEdit(imageUri = uri)) }
+                )
+            }
+
+            entry<PdfViewer> { key ->
+                PdfViewerScreen(
+                    fileUri = key.fileUri,
+                    onBack = { backStack.removeLastOrNull() },
+                    onExtractText = { uri -> backStack.add(TextEdit(imageUri = uri)) }
+                )
+            }
+
+            entry<GenericDocument> { key ->
+                GenericDocumentScreen(
+                    fileUri = key.fileUri,
+                    onBack = { backStack.removeLastOrNull() }
+                )
+            }
+
             entry<DocumentEdit> { key ->
                 DocumentEditScreen(
                     docId         = key.docId,
@@ -161,10 +204,19 @@ fun MainNavigation(startWithScan: Boolean = false) {
             }
 
             entry<Search> {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 SearchScreen(
                     onBack = { backStack.removeLastOrNull() },
                     onResultClick = { record ->
-                        backStack.add(DocumentViewer(docId = record.id, imageUri = record.imageUri))
+                        val uri = android.net.Uri.parse(record.imageUri)
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        if (mimeType.startsWith("image/")) {
+                            backStack.add(ImageEditor(imageUri = record.imageUri))
+                        } else if (mimeType == "application/pdf") {
+                            backStack.add(PdfViewer(fileUri = record.imageUri))
+                        } else {
+                            backStack.add(GenericDocument(fileUri = record.imageUri))
+                        }
                     }
                 )
             }

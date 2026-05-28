@@ -15,8 +15,13 @@ fun AdMobBanner(modifier: Modifier = Modifier) {
         factory = { context ->
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
-                // Real AdMob Banner ID
-                adUnitId = "ca-app-pub-3486794301895160/1031054799"
+                // Use Test ID for debug builds to ensure ads show, use Real ID for production
+                val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                if (isDebuggable) {
+                    adUnitId = "ca-app-pub-3940256099942544/6300978111" // Google's official Test Banner ID
+                } else {
+                    adUnitId = "ca-app-pub-3486794301895160/1031054799" // Your Real ID
+                }
                 loadAd(AdRequest.Builder().build())
             }
         }

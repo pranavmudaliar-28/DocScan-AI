@@ -14,6 +14,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class DocumentViewer(val docId: String = "doc_001", val imageUri: String = "") : NavKey
 @Serializable data class DocumentEdit(val docId: String = "", val imageUri: String = "") : NavKey
 @Serializable data class TextEdit(val imageUri: String = "") : NavKey
+@Serializable data class PdfViewer(val fileUri: String = "") : NavKey
+@Serializable data class ImageEditor(val imageUri: String = "") : NavKey
+@Serializable data class GenericDocument(val fileUri: String = "") : NavKey
 @Serializable data object Convert : NavKey
 @Serializable data object AppSettings : NavKey
 @Serializable data object Search : NavKey

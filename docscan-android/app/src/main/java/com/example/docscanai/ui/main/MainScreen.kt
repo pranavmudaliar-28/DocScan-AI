@@ -352,6 +352,7 @@ private fun FilesTabScanItem(
 
 @Composable
 private fun AvatarHeader(onSettings: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val name     = AuthRepository.getName().ifBlank { "Maya Chen" }
     val initials = name.split(" ").take(2)
         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
@@ -369,8 +370,11 @@ private fun AvatarHeader(onSettings: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(Color(0xFF3B82F6), CircleShape)
+                    .size(48.dp)
+                    .background(
+                        Brush.linearGradient(colors = listOf(Color(0xFF3B82F6), Color(0xFFA855F7))),
+                        shape = CircleShape
+                    )
                     .clip(CircleShape)
                     .clickable(onClick = onSettings),
                 contentAlignment = Alignment.Center,
@@ -394,8 +398,10 @@ private fun AvatarHeader(onSettings: () -> Unit) {
         
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(40.dp)
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(44.dp).clickable {
+                android.widget.Toast.makeText(context, "No new notifications", android.widget.Toast.LENGTH_SHORT).show()
+            }
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(Icons.Outlined.Notifications, "Notifications", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
@@ -467,15 +473,15 @@ private fun QuickActionItem(
         verticalArrangement   = Arrangement.spacedBy(10.dp),
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clickable(onClick = onClick),
-            shape    = RoundedCornerShape(16.dp),
-            color    = MaterialTheme.colorScheme.surface,
-            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(8.dp, RoundedCornerShape(20.dp), spotColor = color.copy(alpha = 0.2f)).clickable(onClick = onClick),
+            shape    = RoundedCornerShape(20.dp),
+            color    = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            border   = BorderStroke(1.dp, color.copy(alpha = 0.1f)),
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Surface(shape = RoundedCornerShape(10.dp), color = color.copy(alpha = 0.1f), modifier = Modifier.size(44.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, color.copy(alpha = 0.05f))))) {
+                Surface(shape = CircleShape, color = color.copy(alpha = 0.15f), modifier = Modifier.size(52.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(icon, label, tint = color, modifier = Modifier.size(24.dp))
+                        Icon(icon, label, tint = color, modifier = Modifier.size(26.dp))
                     }
                 }
             }
@@ -525,10 +531,10 @@ private fun RecentScansSection(
 
         if (scans.isEmpty()) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape    = RoundedCornerShape(16.dp),
-                color    = MaterialTheme.colorScheme.surfaceContainerLow,
-                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                shape    = RoundedCornerShape(20.dp),
+                color    = MaterialTheme.colorScheme.surface,
+                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             ) {
                 Column(
                     modifier            = Modifier.fillMaxWidth().padding(vertical = 36.dp),
@@ -567,10 +573,10 @@ private fun RecentScansSection(
 @Composable
 private fun ScanItem(record: ScanRecord, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape    = RoundedCornerShape(14.dp),
-        color    = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.03f)),
+        shape    = RoundedCornerShape(16.dp),
+        color    = MaterialTheme.colorScheme.surface,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
         Row(
             modifier          = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(12.dp),

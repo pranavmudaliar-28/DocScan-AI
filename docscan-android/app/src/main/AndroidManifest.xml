@@ -58,6 +58,11 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Crop Image Activity -->
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.DarkActionBar"/>
+
     </application>
 
 </manifest>
