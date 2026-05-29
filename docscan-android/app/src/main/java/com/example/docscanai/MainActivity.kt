@@ -1,6 +1,7 @@
 package com.example.docscanai
 
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,6 +45,11 @@ class MainActivity : ComponentActivity() {
         com.example.docscanai.data.AppSettingsRepository.init(this)
         AuthRepository.init(this)
         ScanHistoryRepository.init(this)
+        // Initialize Database and sync settings
+        com.example.docscanai.data.local.DatabaseModule.init(applicationContext)
+        val autoSync = getSharedPreferences("app_prefs", Context.MODE_PRIVATE).getBoolean("autoSync", true)
+        val wifiOnly = getSharedPreferences("app_prefs", Context.MODE_PRIVATE).getBoolean("wifiOnlySync", false)
+        com.example.docscanai.data.sync.SyncManager.setupPeriodicSync(applicationContext, autoSync, wifiOnly)
         
         // Initialize AdMob and preload Interstitial
         MobileAds.initialize(this) {}

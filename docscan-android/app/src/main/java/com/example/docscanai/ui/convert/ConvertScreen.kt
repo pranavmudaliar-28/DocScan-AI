@@ -49,6 +49,10 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.coroutines.resume
+import com.example.docscanai.utils.ConversionEngine
+import com.example.docscanai.data.local.DatabaseModule
+import com.example.docscanai.data.local.DocumentEntity
+import java.util.Date
 
 // ---------------------------------------------------------------------------
 // Data model
@@ -67,7 +71,7 @@ private data class ConvertItem(
     val errorMsg: String = "",
 )
 
-private val OUTPUT_FORMATS = listOf("PDF", "JPEG", "PNG", "WEBP", "TXT")
+private val OUTPUT_FORMATS = listOf("PDF", "JPEG", "PNG", "WEBP", "TXT", "DOCX")
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -188,7 +192,12 @@ fun ConvertScreen(onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(enabled = !converting) {
-                            filePicker.launch(arrayOf("image/*", "image/jpeg", "image/png", "application/pdf"))
+                            filePicker.launch(arrayOf(
+                                "image/*", 
+                                "application/pdf", 
+                                "text/plain", 
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            ))
                         }
                         .padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -416,8 +425,19 @@ private fun FileItemRow(
 
 private suspend fun doConvert(context: Context, item: ConvertItem, format: String): File? {
     val mime = item.sourceMime
+    val isDocx = item.sourceName.endsWith(".docx", ignoreCase = true) || mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    val isTxt = item.sourceName.endsWith(".txt", ignoreCase = true) || mime == "text/plain"
     return when {
         format == "TXT"                                    -> convertToTxt(context, item.sourceUri, mime)
+        format == "DOCX"                                   -> convertToDocx(context, item.sourceUri, mime)
+        format == "PDF" && isDocx                          -> {
+            val out = cacheFile(context, "pdf")
+            ConversionEngine.docxToPdf(context, item.sourceUri, out).getOrNull()
+        }
+        format == "PDF" && isTxt                           -> {
+            val out = cacheFile(context, "pdf")
+            ConversionEngine.textToPdf(context, item.sourceUri, out).getOrNull()
+        }
         format == "PDF" && mime.startsWith("image/")       -> imageToPdf(context, item.sourceUri)
         mime.startsWith("image/")                          -> convertImageFormat(context, item.sourceUri, format)
         mime == "application/pdf" && format != "PDF"       -> pdfToImage(context, item.sourceUri, format)
@@ -490,11 +510,36 @@ private suspend fun pdfToImage(context: Context, uri: Uri, format: String): File
 private suspend fun convertToTxt(context: Context, uri: Uri, mime: String): File? =
     withContext(Dispatchers.IO) {
         try {
+            if (mime == "application/pdf") {
+                val out = cacheFile(context, "txt")
+                val res = ConversionEngine.pdfToText(context, uri, out)
+                if (res.isSuccess) {
+                    val text = res.getOrNull()?.readText() ?: ""
+                    if (text.trim().isNotEmpty()) return@withContext res.getOrNull()
+                }
+            }
             val text = if (mime == "application/pdf") extractPdfText(context, uri)
                        else extractImageText(context, uri)
             val out = cacheFile(context, "txt")
             out.writeText(text)
             out
+        } catch (e: Exception) { null }
+    }
+
+private suspend fun convertToDocx(context: Context, uri: Uri, mime: String): File? =
+    withContext(Dispatchers.IO) {
+        try {
+            val out = cacheFile(context, "docx")
+            if (mime == "application/pdf") {
+                val res = ConversionEngine.pdfToDocx(context, uri, out)
+                if (res.isSuccess) return@withContext res.getOrNull()
+            }
+            // Fallback: extract text via OCR, then package into DOCX structure
+            val text = if (mime == "application/pdf") extractPdfText(context, uri) else extractImageText(context, uri)
+            val tempTxt = cacheFile(context, "txt").apply { writeText(text) }
+            val res = ConversionEngine.pdfToDocx(context, android.net.Uri.fromFile(tempTxt), out)
+            tempTxt.delete()
+            res.getOrNull()
         } catch (e: Exception) { null }
     }
 
@@ -540,21 +585,58 @@ private suspend fun extractPdfText(context: Context, uri: Uri): String =
 // Download helpers
 // ---------------------------------------------------------------------------
 
-// Copy single result to MediaStore
+// Copy single result to MediaStore and app library
 private suspend fun downloadSingle(context: Context, item: ConvertItem): Boolean =
     withContext(Dispatchers.IO) {
         val file = item.resultFile ?: return@withContext false
         try {
             val isTxt    = file.name.endsWith(".txt")
+            val isDocx   = file.name.endsWith(".docx")
             val isPdf    = file.name.endsWith(".pdf")
             val mimeType = when {
                 isTxt -> "text/plain"
+                isDocx -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 isPdf -> "application/pdf"
                 file.name.endsWith(".png") -> "image/png"
                 file.name.endsWith(".webp") -> "image/webp"
                 else -> "image/jpeg"
             }
-            if (isTxt || isPdf) {
+            
+            // Save to Library (Database)
+            val appFilesDir = File(context.filesDir, "documents").apply { mkdirs() }
+            val internalFile = File(appFilesDir, item.resultName.ifEmpty { "converted_${System.currentTimeMillis()}" })
+            file.copyTo(internalFile, overwrite = true)
+            
+            val newDoc = DocumentEntity(
+                name = item.resultName,
+                imageUri = Uri.fromFile(internalFile).toString(),
+                timestamp = System.currentTimeMillis(),
+                folderId = null
+            )
+            DatabaseModule.localDocumentRepository.insertDocument(newDoc)
+
+            // Background text extraction for search
+            if (isTxt) {
+                try {
+                    val txt = internalFile.readText()
+                    if (txt.isNotBlank()) {
+                        DatabaseModule.localDocumentRepository.updateDocument(newDoc.copy(ocrText = txt))
+                    }
+                } catch (e: Exception) {}
+            } else if (isPdf || mimeType.startsWith("image/")) {
+                try {
+                    val (blocks, _, _) = com.example.docscanai.data.OcrRepository.runLocalOcr(
+                        context, Uri.fromFile(internalFile).toString(), mimeType
+                    )
+                    val txt = blocks.joinToString(" ") { it.text }
+                    if (txt.isNotBlank()) {
+                        DatabaseModule.localDocumentRepository.updateDocument(newDoc.copy(ocrText = txt))
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // Save to Downloads / Pictures
+            if (isTxt || isDocx || isPdf) {
                 // Save to Downloads
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val values = ContentValues().apply {

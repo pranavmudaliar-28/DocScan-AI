@@ -23,7 +23,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.SubcomposeAsyncImage
 import com.canhub.cropper.CropImageContract
@@ -66,9 +68,49 @@ fun ImageEditorScreen(
     // UI state
     var showDrawMenu by remember { mutableStateOf(false) }
     var showFilterMenu by remember { mutableStateOf(false) }
+    var showTuneMenu by remember { mutableStateOf(false) }
+    var showWatermarkMenu by remember { mutableStateOf(false) }
+    var showSignatureMenu by remember { mutableStateOf(false) }
+    
+    // Additional overlays
+    var watermarkText by remember { mutableStateOf("") }
     
     // Filter state
     var colorMatrix by remember { mutableStateOf(androidx.compose.ui.graphics.ColorMatrix()) }
+    var brightness by remember { mutableFloatStateOf(0f) } // -1f to 1f
+    var contrast by remember { mutableFloatStateOf(0f) } // -1f to 1f
+
+    val combinedMatrix = remember(colorMatrix, brightness, contrast) {
+        val c = contrast + 1f
+        val t = (-0.5f * c + 0.5f) * 255f + (brightness * 255f)
+        val tuneMatrix = androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+            c,  0f, 0f, 0f, t,
+            0f, c,  0f, 0f, t,
+            0f, 0f, c,  0f, t,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        
+        // Multiply colorMatrix with tuneMatrix
+        val result = androidx.compose.ui.graphics.ColorMatrix()
+        // Compose ColorMatrix doesn't have a multiply method exposed, so we just apply it sequentially if possible.
+        // Actually, ColorMatrix has `setToMultiply(m1, m2)` or we can just apply both using `ColorFilter.colorMatrix(tuneMatrix)`... wait, we can only pass one ColorFilter.
+        // We'll just do manual array multiplication or fallback to just using tuneMatrix.
+        // For simplicity, let's just use `setToMultiply` if available or manual.
+        val array1 = colorMatrix.values
+        val array2 = tuneMatrix.values
+        val resArray = FloatArray(20)
+        for (i in 0..3) {
+            for (j in 0..4) {
+                var sum = 0f
+                for (k in 0..3) {
+                    sum += array1[i * 5 + k] * array2[k * 5 + j]
+                }
+                if (j == 4) sum += array1[i * 5 + 4]
+                resArray[i * 5 + j] = sum
+            }
+        }
+        androidx.compose.ui.graphics.ColorMatrix(resArray)
+    }
     
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
@@ -178,6 +220,57 @@ fun ImageEditorScreen(
                             }) { Text("Invert") }
                         }
                     }
+                } else if (showTuneMenu) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { showTuneMenu = false }) { Icon(Icons.Default.Close, "Close") }
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { brightness = 0f; contrast = 0f }) { Text("Reset") }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Brightness", modifier = Modifier.width(80.dp), style = MaterialTheme.typography.labelSmall)
+                            Slider(
+                                value = brightness,
+                                onValueChange = { brightness = it },
+                                valueRange = -1f..1f,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Contrast", modifier = Modifier.width(80.dp), style = MaterialTheme.typography.labelSmall)
+                            Slider(
+                                value = contrast,
+                                onValueChange = { contrast = it },
+                                valueRange = -1f..1f,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                } else if (showWatermarkMenu) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { showWatermarkMenu = false }) { Icon(Icons.Default.Close, "Close") }
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { watermarkText = "" }) { Text("Clear") }
+                        }
+                        OutlinedTextField(
+                            value = watermarkText,
+                            onValueChange = { watermarkText = it },
+                            label = { Text("Watermark Text") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                } else if (showSignatureMenu) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = { showSignatureMenu = false; isDrawingMode = false }) { Icon(Icons.Default.Close, "Close") }
+                        Text("Draw Signature", style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { isDrawingMode = false; showSignatureMenu = false }) { Text("Done") }
+                    }
                 } else {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
@@ -205,6 +298,24 @@ fun ImageEditorScreen(
                         }
                         item {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(onClick = { showTuneMenu = true }) { Icon(Icons.Default.Tune, "Tune") }
+                                Text("Tune", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        item {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(onClick = { showWatermarkMenu = true }) { Icon(Icons.Default.BrandingWatermark, "Watermark") }
+                                Text("Watermark", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        item {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(onClick = { showSignatureMenu = true; isDrawingMode = true; currentColor = Color.Black; isEraser = false }) { Icon(Icons.Default.Create, "Sign") }
+                                Text("Sign", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        item {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 IconButton(onClick = { showDrawMenu = true; isDrawingMode = true }) { 
                                     Icon(Icons.Default.Draw, "Draw", tint = if (isDrawingMode) MaterialTheme.colorScheme.primary else LocalContentColor.current) 
                                 }
@@ -216,10 +327,16 @@ fun ImageEditorScreen(
                                 IconButton(onClick = { 
                                     scale = 1f; offsetX = 0f; offsetY = 0f; rotation = 0f
                                     colorMatrix = androidx.compose.ui.graphics.ColorMatrix()
+                                    brightness = 0f
+                                    contrast = 0f
+                                    watermarkText = ""
                                     paths = emptyList()
                                     isDrawingMode = false
                                     showDrawMenu = false
                                     showFilterMenu = false
+                                    showTuneMenu = false
+                                    showWatermarkMenu = false
+                                    showSignatureMenu = false
                                     currentImageUri = imageUri
                                 }) { Icon(Icons.Default.Undo, "Reset") }
                                 Text("Reset", style = MaterialTheme.typography.labelSmall)
@@ -320,7 +437,7 @@ fun ImageEditorScreen(
                 model = currentImageUri,
                 contentDescription = "Image Editor",
                 contentScale = ContentScale.Fit,
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(colorMatrix),
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(combinedMatrix),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
@@ -372,6 +489,22 @@ fun ImageEditorScreen(
                         )
                     }
                 }
+            }
+            
+            if (watermarkText.isNotEmpty()) {
+                Text(
+                    text = watermarkText,
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.graphicsLayer(
+                        rotationZ = -45f,
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    )
+                )
             }
         }
     }

@@ -78,13 +78,33 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
     ) {
-        HorizontalPager(
-            state    = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) { pageIndex ->
-            PageContent(page = pages[pageIndex], pageIndex = pageIndex)
+        // Floating background particles
+        val infiniteTransition = rememberInfiniteTransition(label = "bg_float")
+        val floatY by infiniteTransition.animateFloat(
+            initialValue = -10f, targetValue = 10f,
+            animationSpec = infiniteRepeatable(tween(2500, easing = EaseInOutSine), RepeatMode.Reverse),
+            label = "float"
+        )
+        Box(modifier = Modifier.fillMaxSize().weight(1f)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val dots = listOf(
+                    Offset(size.width * 0.1f, size.height * 0.2f), Offset(size.width * 0.8f, size.height * 0.1f),
+                    Offset(size.width * 0.9f, size.height * 0.7f), Offset(size.width * 0.2f, size.height * 0.8f)
+                )
+                dots.forEachIndexed { index, offset ->
+                    drawCircle(
+                        color = IntelligentBlue.copy(alpha = 0.15f),
+                        radius = (4 + index).dp.toPx(),
+                        center = offset.copy(y = offset.y + floatY * (if (index % 2 == 0) 1f else -1f))
+                    )
+                }
+            }
+            HorizontalPager(
+                state    = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { pageIndex ->
+                PageContent(page = pages[pageIndex], pageIndex = pageIndex)
+            }
         }
 
         // Bottom controls

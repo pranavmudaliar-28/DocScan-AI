@@ -58,6 +58,18 @@ fun LoginScreen(
         }
     }
 
+    val shakeOffset = remember { Animatable(0f) }
+    LaunchedEffect(error) {
+        if (error != null) {
+            // Shake animation on error
+            repeat(3) {
+                shakeOffset.animateTo(10f, tween(50, easing = LinearEasing))
+                shakeOffset.animateTo(-10f, tween(50, easing = LinearEasing))
+            }
+            shakeOffset.animateTo(0f, tween(50, easing = LinearEasing))
+        }
+    }
+
     fun doGuest() {
         keyboard?.hide()
         error = null; isLoading = true
@@ -148,7 +160,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(24.dp).offset(x = shakeOffset.value.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     // Email
@@ -235,22 +247,30 @@ fun LoginScreen(
                                         listOf(IntelligentBlue, AIGlow)
                                 )
                             )
-                            .clickable(enabled = !isLoading) { doLogin() },
+                            .clickable(enabled = !isLoading) { doLogin() }
+                            .androidx.compose.animation.animateContentSize(
+                                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier    = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color       = Color.White,
-                            )
-                        } else {
-                            Text(
-                                "Sign In",
-                                fontSize   = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color      = Color.White,
-                            )
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = isLoading,
+                            label = "button_state"
+                        ) { loading ->
+                            if (loading) {
+                                CircularProgressIndicator(
+                                    modifier    = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color       = Color.White,
+                                )
+                            } else {
+                                Text(
+                                    "Sign In",
+                                    fontSize   = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color      = Color.White,
+                                )
+                            }
                         }
                     }
                 }
@@ -439,10 +459,17 @@ private fun LoginDarkField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val isFocused = remember { mutableStateOf(false) }
+        val glowAlpha by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (isFocused.value) 0.6f else 0.12f,
+            animationSpec = tween(300),
+            label = "border_glow"
+        )
+        
         Text(
             label.uppercase(),
             fontSize      = 10.sp,
-            color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+            color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = if (isFocused.value) 0.8f else 0.55f),
             fontWeight    = FontWeight.Medium,
             letterSpacing = 1.sp,
             fontFamily    = FontFamily.Monospace,
@@ -457,7 +484,10 @@ private fun LoginDarkField(
             keyboardActions      = keyboardActions,
             singleLine           = true,
             placeholder          = { Text("Enter ${label.lowercase()}", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 15.sp) },
-            modifier             = Modifier.fillMaxWidth().height(52.dp),
+            modifier             = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .androidx.compose.ui.focus.onFocusChanged { isFocused.value = it.isFocused },
             textStyle            = androidx.compose.ui.text.TextStyle(
                 color    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
                 fontSize = 15.sp,
@@ -466,7 +496,7 @@ private fun LoginDarkField(
                 unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
                 focusedContainerColor   = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
                 unfocusedBorderColor    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
-                focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
+                focusedBorderColor      = AIGlow.copy(alpha = glowAlpha),
                 cursorColor             = AIGlow,
             ),
             shape = RoundedCornerShape(12.dp),

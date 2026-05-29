@@ -37,6 +37,7 @@ fun GenericDocumentScreen(
     
     var extractedText by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var isEditableText by remember { mutableStateOf(false) }
     
     LaunchedEffect(fileUri) {
         withContext(Dispatchers.IO) {
@@ -51,6 +52,7 @@ fun GenericDocumentScreen(
                 if (isText) {
                     val stream = context.contentResolver.openInputStream(uri)
                     extractedText = stream?.bufferedReader()?.use { it.readText() }
+                    isEditableText = true
                 } else if (isDocx) {
                     val stream = context.contentResolver.openInputStream(uri)
                     val zis = ZipInputStream(stream)
@@ -117,6 +119,18 @@ fun GenericDocumentScreen(
         }
     }
 
+    fun saveText() {
+        if (extractedText == null) return
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { 
+                it.write(extractedText!!.toByteArray()) 
+            }
+            Toast.makeText(context, "Saved successfully", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to save", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -127,6 +141,11 @@ fun GenericDocumentScreen(
                     }
                 },
                 actions = {
+                    if (isEditableText) {
+                        IconButton(onClick = ::saveText) {
+                            Icon(Icons.Default.Save, "Save")
+                        }
+                    }
                     IconButton(onClick = ::shareFile) {
                         Icon(Icons.Default.Share, "Share")
                     }
@@ -178,11 +197,20 @@ fun GenericDocumentScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    Text(
-                        text = extractedText!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    if (isEditableText) {
+                        OutlinedTextField(
+                            value = extractedText ?: "",
+                            onValueChange = { extractedText = it },
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+                        )
+                    } else {
+                        Text(
+                            text = extractedText!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                     Spacer(modifier = Modifier.height(32.dp))
                     Button(onClick = ::openInExternalApp, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(18.dp))

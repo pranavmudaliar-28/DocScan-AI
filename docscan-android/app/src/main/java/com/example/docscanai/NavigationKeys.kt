@@ -17,6 +17,18 @@ import kotlinx.serialization.Serializable
 @Serializable data class PdfViewer(val fileUri: String = "") : NavKey
 @Serializable data class ImageEditor(val imageUri: String = "") : NavKey
 @Serializable data class GenericDocument(val fileUri: String = "") : NavKey
+@Serializable data class FolderDetail(val folderId: String) : NavKey
+
+// Phase 5 Tools
+@Serializable data object PdfMerge : NavKey
+@Serializable data object PdfSplit : NavKey
+@Serializable data object PdfCompress : NavKey
+
+// Phase 6 Tools
+@Serializable data object SignatureLibrary : NavKey
+@Serializable data object SignatureCreate : NavKey
+@Serializable data class SignatureOverlay(val fileUri: String = "") : NavKey
+
 @Serializable data object Convert : NavKey
 @Serializable data object AppSettings : NavKey
 @Serializable data object Search : NavKey

@@ -26,6 +26,9 @@ import com.example.docscanai.ui.viewer.DocumentViewerScreen
 import com.example.docscanai.ui.editor.ImageEditorScreen
 import com.example.docscanai.ui.viewer.PdfViewerScreen
 import com.example.docscanai.ui.viewer.GenericDocumentScreen
+import com.example.docscanai.ui.signature.SignatureLibraryScreen
+import com.example.docscanai.ui.signature.SignatureCreateScreen
+import com.example.docscanai.ui.tools.SignatureOverlayScreen
 
 import androidx.compose.runtime.LaunchedEffect
 
@@ -88,6 +91,26 @@ fun MainNavigation(startWithScan: Boolean = false) {
                     onSettings = { backStack.add(AppSettings) },
                     onConvert  = { backStack.add(Convert) },
                     onSearch   = { backStack.add(Search) },
+                    onPdfMerge = { backStack.add(PdfMerge) },
+                    onPdfSplit = { backStack.add(PdfSplit) },
+                    onPdfCompress = { backStack.add(PdfCompress) },
+                    onRoute = { route ->
+                        when (route) {
+                            "signature_create" -> backStack.add(SignatureCreate)
+                            "signature_library" -> backStack.add(SignatureLibrary)
+                            "pdf_sign" -> {
+                                // For now, we need to pick a file first.
+                                // In a real app we'd show a file picker, but for MVP we can use GalleryImport.
+                                // The user can also open a PDF and click "Sign" from there.
+                                // For this button, let's open Gallery and filter for PDF if possible,
+                                // or just show a message. Let's redirect to search or let the user know.
+                                android.widget.Toast.makeText(context, "Open a PDF from files to sign it", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            "image_sign" -> {
+                                android.widget.Toast.makeText(context, "Open an image from files to sign it", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                     onScanItem = { record ->
                         val uri = android.net.Uri.parse(record.imageUri)
                         val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
@@ -95,10 +118,15 @@ fun MainNavigation(startWithScan: Boolean = false) {
                             backStack.add(ImageEditor(imageUri = record.imageUri))
                         } else if (mimeType == "application/pdf") {
                             backStack.add(PdfViewer(fileUri = record.imageUri))
+                        } else if (mimeType.startsWith("text/")) {
+                            backStack.add(TextEdit(imageUri = record.imageUri))
                         } else {
                             backStack.add(GenericDocument(fileUri = record.imageUri))
                         }
                     },
+                    onFolderClick = { folderId ->
+                        backStack.add(FolderDetail(folderId = folderId))
+                    }
                 )
             }
 
@@ -113,6 +141,8 @@ fun MainNavigation(startWithScan: Boolean = false) {
                             backStack.add(ImageEditor(imageUri = uri.toString()))
                         } else if (mimeType == "application/pdf") {
                             backStack.add(PdfViewer(fileUri = uri.toString()))
+                        } else if (mimeType.startsWith("text/")) {
+                            backStack.add(TextEdit(imageUri = uri.toString()))
                         } else {
                             backStack.add(GenericDocument(fileUri = uri.toString()))
                         }
@@ -132,6 +162,8 @@ fun MainNavigation(startWithScan: Boolean = false) {
                             backStack.add(ImageEditor(imageUri = uri.toString()))
                         } else if (mimeType == "application/pdf") {
                             backStack.add(PdfViewer(fileUri = uri.toString()))
+                        } else if (mimeType.startsWith("text/")) {
+                            backStack.add(TextEdit(imageUri = uri.toString()))
                         } else {
                             backStack.add(GenericDocument(fileUri = uri.toString()))
                         }
@@ -172,7 +204,8 @@ fun MainNavigation(startWithScan: Boolean = false) {
                 PdfViewerScreen(
                     fileUri = key.fileUri,
                     onBack = { backStack.removeLastOrNull() },
-                    onExtractText = { uri -> backStack.add(TextEdit(imageUri = uri)) }
+                    onExtractText = { uri -> backStack.add(TextEdit(imageUri = uri)) },
+                    onSignPdf = { uri -> backStack.add(SignatureOverlay(fileUri = uri)) }
                 )
             }
 
@@ -201,6 +234,40 @@ fun MainNavigation(startWithScan: Boolean = false) {
 
             entry<Convert> {
                 ConvertScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<PdfMerge> {
+                com.example.docscanai.ui.tools.PdfMergeScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<PdfSplit> {
+                com.example.docscanai.ui.tools.PdfSplitScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<PdfCompress> {
+                com.example.docscanai.ui.tools.PdfCompressScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<SignatureLibrary> {
+                SignatureLibraryScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onCreateSignature = { backStack.add(SignatureCreate) },
+                    onSignatureSelected = {
+                        // In the future, this could return a result. For now, we just manage them here.
+                    }
+                )
+            }
+
+            entry<SignatureCreate> {
+                SignatureCreateScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<SignatureOverlay> { key ->
+                SignatureOverlayScreen(
+                    fileUri = key.fileUri,
+                    onBack = { backStack.removeLastOrNull() },
+                    onNavigateToLibrary = { backStack.add(SignatureLibrary) }
+                )
             }
 
             entry<Search> {
@@ -249,6 +316,27 @@ fun MainNavigation(startWithScan: Boolean = false) {
 
             entry<TermsAndConditions> {
                 TermsAndConditionsScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            entry<FolderDetail> { key ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+                com.example.docscanai.ui.library.FolderDetailScreen(
+                    folderId = key.folderId,
+                    onBack = { backStack.removeLastOrNull() },
+                    onDocumentClick = { record ->
+                        val uri = android.net.Uri.parse(record.imageUri)
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        if (mimeType.startsWith("image/")) {
+                            backStack.add(ImageEditor(imageUri = record.imageUri))
+                        } else if (mimeType == "application/pdf") {
+                            backStack.add(PdfViewer(fileUri = record.imageUri))
+                        } else if (mimeType.startsWith("text/")) {
+                            backStack.add(TextEdit(imageUri = record.imageUri))
+                        } else {
+                            backStack.add(GenericDocument(fileUri = record.imageUri))
+                        }
+                    }
+                )
             }
         }
     )

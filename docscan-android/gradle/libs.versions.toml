@@ -16,7 +16,7 @@ lifecycleViewmodelNav3 = "2.10.0"
 hilt = "2.56.2"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
-room = "2.6.1"
+room = "2.7.0-alpha11"
 ksp = "2.3.7"
 hiltNavigationCompose = "1.2.0"
 camerax = "1.4.1"
@@ -26,9 +26,15 @@ supabase             = "3.0.0"
 ktor                 = "3.0.0"
 credentialsManager   = "1.3.0"
 googleid             = "1.1.1"
+work                 = "2.9.0"
+hiltWork             = "1.2.0"
+pdfbox = "2.0.27.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hiltWork" }
+hilt-compiler-ext = { module = "androidx.hilt:hilt-compiler", version.ref = "hiltWork" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3"}
@@ -81,6 +87,7 @@ ktor-client-android = { module = "io.ktor:ktor-client-android",         version.
 credentials      = { module = "androidx.credentials:credentials",                    version.ref = "credentialsManager" }
 credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsManager" }
 googleid         = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+pdfbox           = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfbox" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

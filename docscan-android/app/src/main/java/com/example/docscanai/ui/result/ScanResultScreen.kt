@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.example.docscanai.data.ScanHistoryRepository
-import com.example.docscanai.data.ScanRecord
+import com.example.docscanai.data.local.DocumentEntity
+import com.example.docscanai.data.local.DatabaseModule
 import androidx.core.net.toUri
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -52,9 +53,10 @@ fun ScanResultScreen(
     var scanName by remember { mutableStateOf("Processing...") }
     var scanTimestamp by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var isOcrProcessing by remember { mutableStateOf(false) }
 
     LaunchedEffect(scanId) {
-        val existing = ScanHistoryRepository.findById(scanId)
+        val existing = DatabaseModule.localDocumentRepository.getDocumentById(scanId)
         if (existing != null) {
             scanName = existing.name
             scanTimestamp = existing.timestamp
@@ -67,15 +69,33 @@ fun ScanResultScreen(
             val ts = System.currentTimeMillis()
             scanTimestamp = ts
             scanName = "$label — ${getScanDateFmt().format(Date(ts))}"
-            ScanHistoryRepository.addScan(
-                context,
-                ScanRecord(
-                    id        = scanId,
-                    name      = scanName,
-                    imageUri  = imageUri,
-                    timestamp = ts,
-                )
+            
+            val newDoc = DocumentEntity(
+                id        = scanId,
+                name      = scanName,
+                imageUri  = imageUri,
+                timestamp = ts,
             )
+            DatabaseModule.localDocumentRepository.insertDocument(newDoc)
+            
+            // Background OCR extraction for search
+            isOcrProcessing = true
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val mime = if (imageUri.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "image/jpeg"
+                    val (blocks, _, _) = com.example.docscanai.data.OcrRepository.runLocalOcr(context, imageUri, mime)
+                    val extractedText = blocks.joinToString(" ") { it.text }
+                    if (extractedText.isNotBlank()) {
+                        DatabaseModule.localDocumentRepository.updateDocument(
+                            newDoc.copy(ocrText = extractedText)
+                        )
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isOcrProcessing = false
+                }
+            }
         }
     }
 
@@ -252,7 +272,7 @@ fun ScanResultScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            PreviewTab(imageUri = imageUri, onViewDocument = onViewDocument)
+            PreviewTab(imageUri = imageUri, isOcrProcessing = isOcrProcessing, onViewDocument = onViewDocument)
         }
     }
 }
@@ -260,7 +280,7 @@ fun ScanResultScreen(
 // ── Preview tab ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
+private fun PreviewTab(imageUri: String, isOcrProcessing: Boolean, onViewDocument: () -> Unit) {
     Column(
         modifier            = Modifier
             .fillMaxSize()
@@ -341,6 +361,49 @@ private fun PreviewTab(imageUri: String, onViewDocument: () -> Unit) {
                         }
                     },
                 )
+                
+                if (isOcrProcessing) {
+                    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "ocr_sweep")
+                    val sweepY by transition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 1f,
+                        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+                            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+                        ),
+                        label = "sweep_y"
+                    )
+
+                    BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                        val heightPx = constraints.maxHeight.toFloat()
+                        val currentY = sweepY * heightPx
+                        
+                        // Scanner line and gradient
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .androidx.compose.ui.graphics.graphicsLayer {
+                                    translationY = currentY - 60.dp.toPx()
+                                }
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, com.example.docscanai.ui.theme.AIGlow.copy(alpha = 0.5f), com.example.docscanai.ui.theme.IntelligentBlue)
+                                    )
+                                )
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .androidx.compose.ui.graphics.graphicsLayer {
+                                    translationY = currentY
+                                }
+                                .background(com.example.docscanai.ui.theme.IntelligentBlue)
+                                .androidx.compose.ui.draw.shadow(8.dp, spotColor = com.example.docscanai.ui.theme.AIGlow)
+                        )
+                    }
+                }
 
                 Box(
                     modifier = Modifier

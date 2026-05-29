@@ -154,7 +154,10 @@ fun SettingsScreen(
                             label    = "Auto-Sync",
                             subtitle = "Upload scans to Supabase storage automatically",
                             checked  = autoSync,
-                            onCheckedChange = { AppSettingsRepository.setSetting(context, "autoSync", it) }
+                            onCheckedChange = { 
+                                AppSettingsRepository.setSetting(context, "autoSync", it)
+                                com.example.docscanai.data.sync.SyncManager.setupPeriodicSync(context, it, wifiOnlySync)
+                            }
                         )
                         SettingsDivider()
                         SettingsToggleRow(
@@ -162,7 +165,10 @@ fun SettingsScreen(
                             label    = "Wi-Fi Only",
                             subtitle = "Only sync when connected to Wi-Fi",
                             checked  = wifiOnlySync,
-                            onCheckedChange = { AppSettingsRepository.setSetting(context, "wifiOnlySync", it) }
+                            onCheckedChange = { 
+                                AppSettingsRepository.setSetting(context, "wifiOnlySync", it)
+                                com.example.docscanai.data.sync.SyncManager.setupPeriodicSync(context, autoSync, it)
+                            }
                         )
                     }
                 }

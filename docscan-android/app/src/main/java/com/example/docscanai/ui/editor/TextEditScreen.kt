@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Build
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -55,6 +57,7 @@ fun TextEditScreen(
     var state       by remember { mutableStateOf<ExtractState>(ExtractState.Loading) }
     var editedText  by remember { mutableStateOf("") }
     var saving      by remember { mutableStateOf(false) }
+    var fontSize    by remember { mutableFloatStateOf(16f) }
 
     fun doExtract() {
         state = ExtractState.Loading
@@ -114,6 +117,26 @@ fun TextEditScreen(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     else
                         Icon(Icons.Default.Save, "Save TXT", tint = MaterialTheme.colorScheme.primary)
+                }
+                // Convert to PDF
+                IconButton(
+                    onClick = {
+                        if (editedText.isNotEmpty()) {
+                            saving = true
+                            scope.launch {
+                                val ok = savePdfFile(context, editedText)
+                                saving = false
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Saved PDF to Downloads/DocScan AI" else "Save failed",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    },
+                    enabled = state is ExtractState.Ready && !saving
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, "Save PDF", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 // Copy all
                 IconButton(
@@ -189,7 +212,8 @@ fun TextEditScreen(
                             .weight(1f)
                             .padding(12.dp),
                         textStyle        = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = fontSize.sp
                         ),
                         placeholder      = {
                             Text(
@@ -210,7 +234,17 @@ fun TextEditScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        val words = editedText.trim()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { if (fontSize > 10f) fontSize -= 2f }) {
+                                Icon(Icons.Default.Remove, "Decrease Font Size", modifier = Modifier.size(16.dp))
+                            }
+                            Text("${fontSize.toInt()}sp", style = MaterialTheme.typography.labelSmall)
+                            IconButton(onClick = { if (fontSize < 32f) fontSize += 2f }) {
+                                Icon(Icons.Default.Add, "Increase Font Size", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val words = editedText.trim()
                             .split("\\s+".toRegex())
                             .count { it.isNotEmpty() }
                         Text(
@@ -223,6 +257,7 @@ fun TextEditScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        }
                     }
                 }
             }
@@ -314,6 +349,56 @@ private suspend fun saveTxtFile(context: Context, text: String): Boolean =
                 ).also { it.mkdirs() }
                 java.io.File(dir, fileName).writeText(text)
             }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+private suspend fun savePdfFile(context: Context, text: String): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            val fileName = "DocScan_text_${System.currentTimeMillis()}.pdf"
+            val pdfDocument = PdfDocument()
+            val paint = android.graphics.Paint()
+            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 size
+            var page = pdfDocument.startPage(pageInfo)
+            var canvas = page.canvas
+            
+            var y = 40f
+            val x = 40f
+            val lineHeight = paint.descent() - paint.ascent()
+            
+            for (line in text.split("\n")) {
+                if (y + lineHeight > pageInfo.pageHeight - 40f) {
+                    pdfDocument.finishPage(page)
+                    page = pdfDocument.startPage(pageInfo)
+                    canvas = page.canvas
+                    y = 40f
+                }
+                canvas.drawText(line, x, y, paint)
+                y += lineHeight
+            }
+            pdfDocument.finishPage(page)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/DocScan AI")
+                }
+                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return@withContext false
+                context.contentResolver.openOutputStream(uri)?.use { pdfDocument.writeTo(it) }
+            } else {
+                val dir = java.io.File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "DocScan AI"
+                ).also { it.mkdirs() }
+                val file = java.io.File(dir, fileName)
+                java.io.FileOutputStream(file).use { pdfDocument.writeTo(it) }
+            }
+            pdfDocument.close()
             true
         } catch (e: Exception) {
             false

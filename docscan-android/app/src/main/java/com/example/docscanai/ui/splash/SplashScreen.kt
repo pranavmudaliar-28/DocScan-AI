@@ -50,16 +50,33 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         label         = "glow"
     )
 
+    val onBackgroundColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+
+    val logoScale = remember { Animatable(0.5f) }
+    val logoAlpha = remember { Animatable(0f) }
+    val documentAlpha = remember { Animatable(0f) }
+    val particleAlpha = remember { Animatable(0f) }
     val textAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        delay(400)
-        textAlpha.animateTo(1f, animationSpec = tween(700))
-        delay(1400)
+        // Logo appears (Scale + Fade)
+        logoScale.animateTo(1.1f, animationSpec = tween(400, easing = FastOutSlowInEasing))
+        logoAlpha.animateTo(1f, animationSpec = tween(400))
+        logoScale.animateTo(1f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+        
+        // AI scan pulse expands / Document outlines animate
+        documentAlpha.animateTo(1f, animationSpec = tween(500))
+        
+        // Glow particles appear
+        particleAlpha.animateTo(1f, animationSpec = tween(500))
+        
+        // Text appears
+        textAlpha.animateTo(1f, animationSpec = tween(600))
+        
+        // Settle & navigate
+        delay(600)
         onSplashComplete()
     }
-
-    val onBackgroundColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
 
     Box(
         modifier = Modifier
@@ -68,7 +85,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         // Particle dots
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize().alpha(particleAlpha.value)) {
             val dots = listOf(
                 Pair(0.08f, 0.05f), Pair(0.88f, 0.08f), Pair(0.25f, 0.12f),
                 Pair(0.65f, 0.04f), Pair(0.80f, 0.18f), Pair(0.05f, 0.28f),
@@ -86,7 +103,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         }
 
         // Concentric rings
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize().alpha(documentAlpha.value)) {
             drawCircle(
                 color  = onBackgroundColor.copy(alpha = 0.05f),
                 radius = 130.dp.toPx(),
@@ -107,7 +124,10 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
         ) {
             // Glass logo box
             Surface(
-                modifier        = Modifier.size(140.dp),
+                modifier        = Modifier
+                    .size(140.dp)
+                    .androidx.compose.ui.draw.scale(logoScale.value)
+                    .alpha(logoAlpha.value),
                 shape           = RoundedCornerShape(28.dp),
                 color           = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
                 border          = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)),
@@ -123,13 +143,13 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
 
                         // Document card
                         drawRoundRect(
-                            color        = onBackgroundColor.copy(alpha = 0.08f),
+                            color        = onBackgroundColor.copy(alpha = 0.08f * documentAlpha.value),
                             topLeft      = Offset(dl, dt),
                             size         = Size(dw, dh),
                             cornerRadius = cr,
                         )
                         drawRoundRect(
-                            color        = onBackgroundColor.copy(alpha = 0.20f + 0.10f * glowPulse),
+                            color        = onBackgroundColor.copy(alpha = (0.20f + 0.10f * glowPulse) * documentAlpha.value),
                             topLeft      = Offset(dl, dt),
                             size         = Size(dw, dh),
                             cornerRadius = cr,
@@ -139,7 +159,7 @@ fun SplashScreen(onSplashComplete: () -> Unit) {
                         // Text lines
                         val lx1 = dl + 8.dp.toPx()
                         val lx2 = dl + dw - 8.dp.toPx()
-                        val lc  = AIGlow.copy(alpha = 0.50f)
+                        val lc  = AIGlow.copy(alpha = 0.50f * documentAlpha.value)
                         val lw  = 2.dp.toPx()
                         drawLine(lc, Offset(lx1, dt + dh * 0.30f), Offset(lx2,                       dt + dh * 0.30f), lw, StrokeCap.Round)
                         drawLine(lc, Offset(lx1, dt + dh * 0.46f), Offset(lx2 - 8.dp.toPx(),  dt + dh * 0.46f), lw, StrokeCap.Round)

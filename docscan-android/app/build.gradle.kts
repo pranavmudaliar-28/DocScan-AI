@@ -142,6 +142,11 @@ dependencies {
   ksp(libs.hilt.compiler)
   implementation(libs.hilt.navigation.compose)
 
+  // WorkManager
+  implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.hilt.work)
+  ksp(libs.hilt.compiler.ext)
+
   // Retrofit & Networking
   implementation(libs.retrofit)
   implementation(libs.retrofit.kotlinx.serialization)
@@ -186,6 +191,9 @@ dependencies {
 
   // Image Cropper
   implementation("com.vanniktech:android-image-cropper:4.6.0")
+
+  // PDFBox
+  implementation(libs.pdfbox)
 }
 
 // ── Version bump tasks ────────────────────────────────────────────────────────

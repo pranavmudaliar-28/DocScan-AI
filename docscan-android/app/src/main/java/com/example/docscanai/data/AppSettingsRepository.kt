@@ -34,6 +34,9 @@ object AppSettingsRepository {
     private val _wifiOnlySync = MutableStateFlow(false)
     val wifiOnlySync: StateFlow<Boolean> = _wifiOnlySync
 
+    private val _viewMode = MutableStateFlow("LIST") // "GRID" or "LIST"
+    val viewMode: StateFlow<String> = _viewMode
+
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         _highQuality.value = prefs.getBoolean("highQuality", true)
@@ -45,6 +48,7 @@ object AppSettingsRepository {
         _smartTagging.value = prefs.getBoolean("smartTagging", true)
         _autoSync.value = prefs.getBoolean("autoSync", true)
         _wifiOnlySync.value = prefs.getBoolean("wifiOnlySync", false)
+        _viewMode.value = prefs.getString("viewMode", "LIST") ?: "LIST"
     }
 
     fun setSetting(context: Context, key: String, value: Boolean) {
@@ -62,6 +66,14 @@ object AppSettingsRepository {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(key, value)
+            .apply()
+    }
+
+    fun setViewMode(context: Context, mode: String) {
+        _viewMode.value = mode
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString("viewMode", mode)
             .apply()
     }
 }

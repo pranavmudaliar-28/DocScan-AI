@@ -3,6 +3,7 @@ package com.example.docscanai.ui.main
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.filled.Sort
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Home
@@ -39,7 +41,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.docscanai.data.AuthRepository
 import com.example.docscanai.data.DefaultDataRepository
-import com.example.docscanai.data.ScanRecord
+// removed import com.example.docscanai.data.ScanRecord
+import com.example.docscanai.data.local.DocumentEntity
+import com.example.docscanai.data.local.FolderEntity
+import com.example.docscanai.data.local.TagEntity
+import com.example.docscanai.data.local.DatabaseModule
 import com.example.docscanai.ui.theme.AIGlow
 import com.example.docscanai.ui.theme.IntelligentBlue
 import java.text.SimpleDateFormat
@@ -66,38 +72,90 @@ fun MainScreen(
     onGallery: () -> Unit,
     onSettings: () -> Unit,
     onConvert: () -> Unit,
-    onScanItem: (ScanRecord) -> Unit,
+    onScanItem: (DocumentEntity) -> Unit,
+    onFolderClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     onSearch: () -> Unit = {},
-    viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
+    onPdfMerge: () -> Unit = {},
+    onPdfSplit: () -> Unit = {},
+    onPdfCompress: () -> Unit = {},
+    onRoute: (String) -> Unit = {},
+    viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DatabaseModule.localDocumentRepository) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recentScans = if (state is MainScreenUiState.Success) {
         (state as MainScreenUiState.Success).data
     } else emptyList()
+    val folders = if (state is MainScreenUiState.Success) {
+        (state as MainScreenUiState.Success).folders
+    } else emptyList()
+    val tags = if (state is MainScreenUiState.Success) {
+        (state as MainScreenUiState.Success).tags
+    } else emptyList()
 
+    val selectedDocIds by viewModel.selectedDocIds.collectAsStateWithLifecycle()
+
+    val coroutineScope = rememberCoroutineScope()
     HomeScreen(
         recentScans = recentScans,
+        folders     = folders,
+        tags        = tags,
         modifier    = modifier,
         onScan      = onScan,
         onGallery   = onGallery,
         onSettings  = onSettings,
         onConvert   = onConvert,
         onSearch    = onSearch,
+        onPdfMerge  = onPdfMerge,
+        onPdfSplit  = onPdfSplit,
+        onPdfCompress = onPdfCompress,
+        onRoute = onRoute,
         onScanItem  = onScanItem,
+        onFolderClick = onFolderClick,
+        onCreateFolder = { name ->
+            coroutineScope.launch {
+                viewModel.createFolder(name)
+            }
+        },
+        onCreateTag = { name ->
+            coroutineScope.launch {
+                viewModel.createTag(name)
+            }
+        },
+        selectedDocIds = selectedDocIds,
+        onToggleSelect = { viewModel.toggleSelection(it) },
+        onClearSelect = { viewModel.clearSelection() },
+        onDeleteSelected = { viewModel.deleteSelectedDocuments() },
+        onMoveSelected = { folderId -> viewModel.moveSelectedToFolder(folderId) },
+        onSetSortOrder = { viewModel.setSortOrder(it) }
     )
 }
 
 @Composable
 internal fun HomeScreen(
-    recentScans: List<ScanRecord>,
+    recentScans: List<DocumentEntity>,
+    folders: List<FolderEntity> = emptyList(),
+    tags: List<TagEntity> = emptyList(),
     modifier: Modifier = Modifier,
     onScan: () -> Unit = {},
     onGallery: () -> Unit = {},
     onSettings: () -> Unit = {},
     onConvert: () -> Unit = {},
     onSearch: () -> Unit = {},
-    onScanItem: (ScanRecord) -> Unit = {},
+    onPdfMerge: () -> Unit = {},
+    onPdfSplit: () -> Unit = {},
+    onPdfCompress: () -> Unit = {},
+    onRoute: (String) -> Unit = {},
+    onScanItem: (DocumentEntity) -> Unit = {},
+    onFolderClick: (String) -> Unit = {},
+    onCreateFolder: (String) -> Unit = {},
+    onCreateTag: (String) -> Unit = {},
+    selectedDocIds: Set<String> = emptySet(),
+    onToggleSelect: (String) -> Unit = {},
+    onClearSelect: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onMoveSelected: (String?) -> Unit = {},
+    onSetSortOrder: (SortOrder) -> Unit = {}
 ) {
     var selectedTab  by remember { mutableIntStateOf(0) }
 
@@ -112,7 +170,7 @@ internal fun HomeScreen(
                         when (tab) {
                             0 -> selectedTab = 0
                             1 -> selectedTab = 1
-                            3 -> onSearch()
+                            3 -> selectedTab = 3
                             4 -> onSettings()
                         }
                     },
@@ -127,36 +185,95 @@ internal fun HomeScreen(
         ) {
             val sidePad = if (maxWidth > 600.dp) ((maxWidth - 600.dp) / 2).coerceAtLeast(0.dp) else 0.dp
 
-            if (selectedTab == 1) {
-                FilesTab(
-                    scans = recentScans,
-                    onScanItem = onScanItem,
-                    modifier = Modifier.fillMaxSize().padding(horizontal = sidePad)
-                )
-            } else {
-                LazyColumn(
-                    modifier       = Modifier.fillMaxSize().padding(horizontal = sidePad),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                ) {
-                    item { AvatarHeader(onSettings = onSettings) }
-
-                item {
-                    Spacer(Modifier.height(20.dp))
-                    QuickActionsGrid(
-                        onScan    = onScan,
-                        onGallery = onGallery,
-                        onConvert = onConvert,
+            when (selectedTab) {
+                1 -> {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    ToolsTab(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = sidePad),
+                        onToolClick = { tool ->
+                            when (tool.route) {
+                                "camera_scanner" -> onScan()
+                                "search" -> onSearch()
+                                "convert" -> onConvert()
+                                "app_settings" -> onSettings()
+                                "pdf_merge" -> onPdfMerge()
+                                "pdf_split" -> onPdfSplit()
+                                "pdf_compress" -> onPdfCompress()
+                                "signature_create" -> onRoute("signature_create")
+                                "signature_library" -> onRoute("signature_library")
+                                "pdf_sign" -> onRoute("pdf_sign")
+                                "image_sign" -> onRoute("image_sign")
+                                else -> android.widget.Toast.makeText(context, "${tool.name} coming soon!", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     )
                 }
-
-                item {
-                    Spacer(Modifier.height(20.dp))
-                    RecentScansSection(
-                        scans      = recentScans,
+                3 -> {
+                    FilesTab(
+                        scans = recentScans,
+                        folders = folders,
+                        tags = tags,
+                        selectedDocIds = selectedDocIds,
+                        onToggleSelect = onToggleSelect,
+                        onClearSelect = onClearSelect,
+                        onDeleteSelected = onDeleteSelected,
+                        onMoveSelected = onMoveSelected,
                         onScanItem = onScanItem,
+                        onFolderClick = onFolderClick,
+                        onCreateFolder = onCreateFolder,
+                        onCreateTag = onCreateTag,
+                        onSetSortOrder = onSetSortOrder,
+                        modifier = Modifier.fillMaxSize().padding(horizontal = sidePad)
                     )
                 }
-            }
+                else -> {
+                    var visible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { visible = true }
+
+                    LazyColumn(
+                        modifier       = Modifier.fillMaxSize().padding(horizontal = sidePad),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                    ) {
+                        item { 
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = visible,
+                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) + 
+                                        androidx.compose.animation.slideInVertically(animationSpec = androidx.compose.animation.core.tween(300)) { it / 4 }
+                            ) {
+                                AvatarHeader(onSettings = onSettings) 
+                            }
+                        }
+
+                        item {
+                            Spacer(Modifier.height(20.dp))
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = visible,
+                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 100)) + 
+                                        androidx.compose.animation.slideInVertically(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 100)) { it / 4 }
+                            ) {
+                                QuickActionsGrid(
+                                    onScan    = onScan,
+                                    onGallery = onGallery,
+                                    onConvert = onConvert,
+                                )
+                            }
+                        }
+
+                        item {
+                            Spacer(Modifier.height(20.dp))
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = visible,
+                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 200)) + 
+                                        androidx.compose.animation.slideInVertically(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 200)) { it / 4 }
+                            ) {
+                                RecentScansSection(
+                                    scans      = recentScans,
+                                    onScanItem = onScanItem,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -164,11 +281,133 @@ internal fun HomeScreen(
 
 @Composable
 private fun FilesTab(
-    scans: List<ScanRecord>,
-    onScanItem: (ScanRecord) -> Unit,
+    scans: List<DocumentEntity>,
+    folders: List<FolderEntity> = emptyList(),
+    tags: List<TagEntity> = emptyList(),
+    selectedDocIds: Set<String> = emptySet(),
+    onToggleSelect: (String) -> Unit = {},
+    onClearSelect: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onMoveSelected: (String?) -> Unit = {},
+    onScanItem: (DocumentEntity) -> Unit,
+    onFolderClick: (String) -> Unit = {},
+    onCreateFolder: (String) -> Unit = {},
+    onCreateTag: (String) -> Unit = {},
+    onSetSortOrder: (SortOrder) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
+    var newTagName by remember { mutableStateOf("") }
+    val viewMode by com.example.docscanai.data.AppSettingsRepository.viewMode.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    if (showCreateFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateFolderDialog = false },
+            title = { Text("Create Folder") },
+            text = {
+                OutlinedTextField(
+                    value = newFolderName,
+                    onValueChange = { newFolderName = it },
+                    label = { Text("Folder Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newFolderName.isNotBlank()) {
+                        onCreateFolder(newFolderName)
+                    }
+                    showCreateFolderDialog = false
+                    newFolderName = ""
+                }) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateFolderDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showCreateTagDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateTagDialog = false },
+            title = { Text("Create Tag") },
+            text = {
+                OutlinedTextField(
+                    value = newTagName,
+                    onValueChange = { newTagName = it },
+                    label = { Text("Tag Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newTagName.isNotBlank()) {
+                        onCreateTag(newTagName)
+                    }
+                    showCreateTagDialog = false
+                    newTagName = ""
+                }) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateTagDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    var showMoveToFolderDialog by remember { mutableStateOf(false) }
+
+    if (showMoveToFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showMoveToFolderDialog = false },
+            title = { Text("Move to Folder") },
+            text = {
+                LazyColumn {
+                    item {
+                        Text(
+                            "Remove from Folder (Root)",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onMoveSelected(null)
+                                    showMoveToFolderDialog = false
+                                }
+                                .padding(16.dp)
+                        )
+                    }
+                    items(folders) { folder ->
+                        Text(
+                            folder.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onMoveSelected(folder.id)
+                                    showMoveToFolderDialog = false
+                                }
+                                .padding(16.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMoveToFolderDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
     
     LazyColumn(
         modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -177,33 +416,101 @@ private fun FilesTab(
     ) {
         // Top Bar
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Files",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.size(40.dp).clickable { }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
+            if (selectedDocIds.isNotEmpty()) {
+                // Contextual Action Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        IconButton(onClick = onClearSelect) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear Selection")
+                        }
+                        Text(
+                            "${selectedDocIds.size} selected",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                     }
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.size(40.dp).clickable { }
-                    ) {
-                        Icon(Icons.Default.GridView, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(onClick = { showMoveToFolderDialog = true }) {
+                            Icon(Icons.Outlined.FolderOpen, contentDescription = "Move to Folder")
+                        }
+                        IconButton(onClick = onDeleteSelected) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Selected", tint = Color.Red)
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Files",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.size(40.dp).clickable { showCreateFolderDialog = true }
+                        ) {
+                            Icon(Icons.Default.CreateNewFolder, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Box {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.size(40.dp).clickable { showSortMenu = true }
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurface)
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Date Modified (Newest)") },
+                                    onClick = { onSetSortOrder(SortOrder.DATE_MODIFIED_DESC); showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Date Created (Newest)") },
+                                    onClick = { onSetSortOrder(SortOrder.DATE_CREATED_DESC); showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Name (A-Z)") },
+                                    onClick = { onSetSortOrder(SortOrder.NAME_ASC); showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Name (Z-A)") },
+                                    onClick = { onSetSortOrder(SortOrder.NAME_DESC); showSortMenu = false }
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (viewMode == "LIST") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.size(40.dp).clickable { com.example.docscanai.data.AppSettingsRepository.setViewMode(context, "LIST") }
+                        ) {
+                            Icon(Icons.Default.List, null, modifier = Modifier.padding(10.dp), tint = if (viewMode == "LIST") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (viewMode == "GRID") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.size(40.dp).clickable { com.example.docscanai.data.AppSettingsRepository.setViewMode(context, "GRID") }
+                        ) {
+                            Icon(Icons.Default.GridView, null, modifier = Modifier.padding(10.dp), tint = if (viewMode == "GRID") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
+                        }
                     }
                 }
             }
@@ -239,8 +546,80 @@ private fun FilesTab(
                 singleLine = true
             )
         }
+        // Tags Section
+        item {
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                item {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.clickable { showCreateTagDialog = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Tag", modifier = Modifier.size(16.dp))
+                            Text("New Tag", fontSize = 13.sp)
+                        }
+                    }
+                }
+                items(tags, key = { it.id }) { tag ->
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.clickable { /* TODO filter by tag */ }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(
+                                try { Color(android.graphics.Color.parseColor(tag.colorCode)) } catch (e: Exception) { IntelligentBlue }
+                            ))
+                            Text(tag.name, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+        // Folders Section
+        if (folders.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "FOLDERS · ${folders.size}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        letterSpacing = 1.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
 
-
+            item {
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 12.dp)
+                ) {
+                    items(folders, key = { it.id }) { folder ->
+                        FolderItem(folder = folder, onClick = { onFolderClick(folder.id) })
+                    }
+                }
+            }
+        }
 
         // Files Section
         item {
@@ -273,17 +652,144 @@ private fun FilesTab(
                 }
             }
         } else {
-            items(scans, key = { it.id }) { record ->
-                val isGallery = record.id.startsWith("gallery")
-                val typeColor = if (isGallery) Color(0xFF06B6D4) else IntelligentBlue
-                val fileType = if (isGallery) "IMG" else "SCAN"
-                
-                FilesTabScanItem(
-                    type = fileType, typeColor = typeColor,
-                    title = record.name, subtitle = "1 page · 2.1 MB",
-                    date = dateFormat.format(Date(record.timestamp)), isStarred = false, hasAi = !isGallery,
-                    onClick = { onScanItem(record) }
-                )
+            item {
+                androidx.compose.animation.AnimatedContent(
+                    targetState = viewMode,
+                    label = "files_view_mode",
+                    transitionSpec = {
+                        androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) togetherWith androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+                    }
+                ) { mode ->
+                    if (mode == "LIST") {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            scans.forEach { record ->
+                                val isGallery = record.id.startsWith("gallery")
+                                val typeColor = if (isGallery) Color(0xFF06B6D4) else IntelligentBlue
+                                val fileType = if (isGallery) "IMG" else "SCAN"
+                                
+                                FilesTabScanItem(
+                                    type = fileType, typeColor = typeColor,
+                                    title = record.name, subtitle = "1 page · 2.1 MB",
+                                    date = dateFormat.format(Date(record.timestamp)), isStarred = false, hasAi = !isGallery,
+                                    isSelected = selectedDocIds.contains(record.id),
+                                    selectionModeEnabled = selectedDocIds.isNotEmpty(),
+                                    onClick = {
+                                        if (selectedDocIds.isNotEmpty()) {
+                                            onToggleSelect(record.id)
+                                        } else {
+                                            onScanItem(record)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        onToggleSelect(record.id)
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        // Grid Mode using simple Grid emulation with rows
+                        val chunked = scans.chunked(2)
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            chunked.forEach { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowItems.forEach { record ->
+                                        val isGallery = record.id.startsWith("gallery")
+                                        val typeColor = if (isGallery) Color(0xFF06B6D4) else IntelligentBlue
+                                        val fileType = if (isGallery) "IMG" else "SCAN"
+
+                                        FilesTabGridScanItem(
+                                            modifier = Modifier.weight(1f),
+                                            type = fileType, typeColor = typeColor,
+                                            title = record.name, subtitle = "2.1 MB",
+                                            date = dateFormat.format(Date(record.timestamp)), isStarred = false, hasAi = !isGallery,
+                                            isSelected = selectedDocIds.contains(record.id),
+                                            selectionModeEnabled = selectedDocIds.isNotEmpty(),
+                                            onClick = {
+                                                if (selectedDocIds.isNotEmpty()) {
+                                                    onToggleSelect(record.id)
+                                                } else {
+                                                    onScanItem(record)
+                                                }
+                                            },
+                                            onLongClick = {
+                                                onToggleSelect(record.id)
+                                            }
+                                        )
+                                    }
+                                    if (rowItems.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun FilesTabGridScanItem(
+    modifier: Modifier = Modifier,
+    type: String, typeColor: Color,
+    title: String, subtitle: String,
+    date: String, isStarred: Boolean, hasAi: Boolean,
+    isSelected: Boolean = false,
+    selectionModeEnabled: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+) {
+    val backgroundColor = if (isSelected) typeColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+    val borderColor = if (isSelected) typeColor else MaterialTheme.colorScheme.surfaceVariant
+    
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+        modifier = modifier.fillMaxWidth().aspectRatio(0.85f).combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(typeColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = typeColor, modifier = Modifier.size(20.dp))
+                    } else {
+                        Text(
+                            type,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = typeColor,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+                if (hasAi) {
+                    Icon(Icons.Default.AutoAwesome, null, tint = IntelligentBlue, modifier = Modifier.size(16.dp))
+                }
+            }
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(date, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
         }
     }
@@ -291,18 +797,28 @@ private fun FilesTab(
 
 
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun FilesTabScanItem(
     type: String, typeColor: Color,
     title: String, subtitle: String,
     date: String, isStarred: Boolean, hasAi: Boolean,
-    onClick: () -> Unit = {}
+    isSelected: Boolean = false,
+    selectionModeEnabled: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
+    val backgroundColor = if (isSelected) typeColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+    val borderColor = if (isSelected) typeColor else MaterialTheme.colorScheme.surfaceVariant
+    
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        color = backgroundColor,
+        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+        modifier = Modifier.fillMaxWidth().combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -316,14 +832,18 @@ private fun FilesTabScanItem(
                     .background(typeColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    type,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = typeColor,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 0.5.sp
-                )
+                if (isSelected) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = typeColor, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(
+                        type,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = typeColor,
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
+                    )
+                }
             }
             
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -343,6 +863,46 @@ private fun FilesTabScanItem(
                     Spacer(Modifier.size(14.dp))
                 }
                 Text(date, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FolderItem(
+    folder: FolderEntity,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.width(140.dp).clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Outlined.FolderOpen,
+                contentDescription = null,
+                tint = IntelligentBlue,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    folder.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "0 files", // TODO count files
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -501,8 +1061,8 @@ private fun QuickActionItem(
 
 @Composable
 private fun RecentScansSection(
-    scans: List<ScanRecord>,
-    onScanItem: (ScanRecord) -> Unit,
+    scans: List<DocumentEntity>,
+    onScanItem: (DocumentEntity) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
         Row(
@@ -571,7 +1131,7 @@ private fun RecentScansSection(
 }
 
 @Composable
-private fun ScanItem(record: ScanRecord, onClick: () -> Unit) {
+private fun ScanItem(record: DocumentEntity, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.03f)),
         shape    = RoundedCornerShape(16.dp),
@@ -657,14 +1217,37 @@ private fun MainTabBar(
             }
             .background(MaterialTheme.colorScheme.surface)
     ) {
+        val indicatorOffset by androidx.compose.animation.core.animateDpAsState(
+            targetValue = when (selectedTab) {
+                0 -> (-80).dp
+                1 -> (-30).dp
+                3 -> 30.dp
+                4 -> 80.dp
+                else -> 0.dp
+            },
+            animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+            label = "indicator_offset"
+        )
+        val intelligentBlue = IntelligentBlue
         Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(68.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment     = Alignment.CenterVertically,
-        ) {
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .height(68.dp)
+                    .drawBehind {
+                        val indicatorWidth = 40.dp.toPx()
+                        val centerX = size.width / 2 + indicatorOffset.toPx()
+                        drawLine(
+                            color = intelligentBlue,
+                            start = Offset(centerX - indicatorWidth / 2, 0f),
+                            end = Offset(centerX + indicatorWidth / 2, 0f),
+                            strokeWidth = 3.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    },
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             TabBarItem(
                 icon     = Icons.Outlined.Home,
                 label    = "Home",
@@ -672,10 +1255,30 @@ private fun MainTabBar(
                 onClick  = { onTabSelect(0) },
             )
             TabBarItem(
-                icon     = Icons.Outlined.FolderOpen,
-                label    = "Files",
+                icon     = Icons.Default.Apps,
+                label    = "Tools",
                 selected = selectedTab == 1,
                 onClick  = { onTabSelect(1) },
+            )
+
+            val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "fab_pulse")
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.05f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = androidx.compose.animation.core.tween(1000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "fab_pulse_scale"
+            )
+            val pulseAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.55f,
+                targetValue = 0.25f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = androidx.compose.animation.core.tween(1000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "fab_pulse_alpha"
             )
 
             // Elevated center scan button — rounded square with blue glow
@@ -686,10 +1289,14 @@ private fun MainTabBar(
                         elevation    = 14.dp,
                         shape        = RoundedCornerShape(18.dp),
                         ambientColor = IntelligentBlue.copy(alpha = 0.30f),
-                        spotColor    = IntelligentBlue.copy(alpha = 0.55f),
+                        spotColor    = IntelligentBlue.copy(alpha = pulseAlpha),
                     )
                     .size(58.dp)
                     .clip(RoundedCornerShape(18.dp))
+                    .androidx.compose.ui.graphics.graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                    }
                     .background(Brush.linearGradient(listOf(IntelligentBlue, AIGlow)))
                     .clickable(onClick = onScan),
                 contentAlignment = Alignment.Center,
@@ -703,14 +1310,14 @@ private fun MainTabBar(
             }
 
             TabBarItem(
-                icon     = Icons.Outlined.Search,
-                label    = "Search",
+                icon     = Icons.Outlined.FolderOpen,
+                label    = "Docs",
                 selected = selectedTab == 3,
                 onClick  = { onTabSelect(3) },
             )
             TabBarItem(
                 icon     = Icons.Outlined.Person,
-                label    = "Account",
+                label    = "Profile",
                 selected = selectedTab == 4,
                 onClick  = { onTabSelect(4) },
             )

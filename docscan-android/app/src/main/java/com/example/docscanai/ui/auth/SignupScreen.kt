@@ -69,6 +69,17 @@ fun SignupScreen(
         }
     }
 
+    val shakeOffset = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(error) {
+        if (error != null) {
+            repeat(3) {
+                shakeOffset.animateTo(10f, androidx.compose.animation.core.tween(50, easing = androidx.compose.animation.core.LinearEasing))
+                shakeOffset.animateTo(-10f, androidx.compose.animation.core.tween(50, easing = androidx.compose.animation.core.LinearEasing))
+            }
+            shakeOffset.animateTo(0f, androidx.compose.animation.core.tween(50, easing = androidx.compose.animation.core.LinearEasing))
+        }
+    }
+
     fun doGoogleSignIn() {
         keyboard?.hide()
         error = null; isLoading = true
@@ -138,7 +149,6 @@ fun SignupScreen(
                 modifier = Modifier.padding(top = 6.dp, bottom = 22.dp),
             )
 
-            // Glass card
             Surface(
                 shape  = RoundedCornerShape(24.dp),
                 color  = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
@@ -146,7 +156,7 @@ fun SignupScreen(
                 shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(modifier = Modifier.padding(22.dp).offset(x = shakeOffset.value.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
                     // Full name
                     DarkField(
@@ -274,18 +284,26 @@ fun SignupScreen(
                                 else
                                     Brush.linearGradient(listOf(IntelligentBlue, AIGlow))
                             )
-                            .then(if (!isLoading) Modifier.clickable { doSignUp() } else Modifier),
+                            .then(if (!isLoading) Modifier.clickable { doSignUp() } else Modifier)
+                            .androidx.compose.animation.animateContentSize(
+                                animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                        } else {
-                            Row(
-                                verticalAlignment     = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text("Create account", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = isLoading,
+                            label = "button_state"
+                        ) { loading ->
+                            if (loading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Row(
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("Create account", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
                     }
@@ -341,14 +359,21 @@ private fun DarkField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    Text(
-        label.uppercase(),
-        fontSize      = 10.sp,
-        color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-        fontWeight    = FontWeight.Medium,
-        letterSpacing = 1.sp,
-        fontFamily    = FontFamily.Monospace,
-    )
+        val isFocused = remember { mutableStateOf(false) }
+        val glowAlpha by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (isFocused.value) 0.6f else 0.12f,
+            animationSpec = androidx.compose.animation.core.tween(300),
+            label = "border_glow"
+        )
+
+        Text(
+            label.uppercase(),
+            fontSize      = 10.sp,
+            color         = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = if (isFocused.value) 0.8f else 0.55f),
+            fontWeight    = FontWeight.Medium,
+            letterSpacing = 1.sp,
+            fontFamily    = FontFamily.Monospace,
+        )
         OutlinedTextField(
             value                = value,
             onValueChange        = onValueChange,
@@ -359,13 +384,16 @@ private fun DarkField(
             keyboardActions      = keyboardActions,
             singleLine           = true,
             placeholder          = { Text("Enter ${label.lowercase()}", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 15.sp) },
-            modifier             = Modifier.fillMaxWidth().height(52.dp),
+            modifier             = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .androidx.compose.ui.focus.onFocusChanged { isFocused.value = it.isFocused },
             textStyle            = androidx.compose.ui.text.TextStyle(color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground, fontSize = 15.sp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f),
                 focusedContainerColor   = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
                 unfocusedBorderColor    = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
-                focusedBorderColor      = AIGlow.copy(alpha = 0.6f),
+                focusedBorderColor      = AIGlow.copy(alpha = glowAlpha),
                 cursorColor             = AIGlow,
             ),
             shape = RoundedCornerShape(12.dp),

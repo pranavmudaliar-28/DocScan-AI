@@ -59,6 +59,22 @@ fun DocumentViewerScreen(
         docName = existing?.name ?: "Document Viewer"
     }
 
+    val animatedScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = clampedScale,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow),
+        label = "scale_physics"
+    )
+    val animatedOffsetX by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = offsetX,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium),
+        label = "offset_x_physics"
+    )
+    val animatedOffsetY by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = offsetY,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium),
+        label = "offset_y_physics"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -71,11 +87,15 @@ fun DocumentViewerScreen(
                 .padding(top = 90.dp, bottom = 120.dp)
                 .clip(RectangleShape)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
+                    androidx.compose.foundation.gestures.detectTransformGestures { _, pan, zoom, _ ->
                         scale = (scale * zoom).coerceIn(0.5f, 4f)
-                        offsetX += pan.x
-                        offsetY += pan.y
-                        if (scale <= 1.05f) { offsetX = 0f; offsetY = 0f }
+                        if (scale > 1.05f) {
+                            offsetX += pan.x
+                            offsetY += pan.y
+                        } else {
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
                     }
                 },
             contentAlignment = Alignment.TopCenter
@@ -84,8 +104,8 @@ fun DocumentViewerScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .wrapContentHeight()
-                    .scale(clampedScale)
-                    .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) },
+                    .scale(animatedScale)
+                    .offset { IntOffset(animatedOffsetX.roundToInt(), animatedOffsetY.roundToInt()) },
                 shape = RoundedCornerShape(8.dp),
                 color = Color.White,
                 shadowElevation = 4.dp

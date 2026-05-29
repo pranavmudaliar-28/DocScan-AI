@@ -1,4 +1,4 @@
-﻿package com.example.docscanai.ui.search
+package com.example.docscanai.ui.search
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -37,8 +37,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.docscanai.data.ScanHistoryRepository
-import com.example.docscanai.data.ScanRecord
+import com.example.docscanai.data.local.DatabaseModule
+import com.example.docscanai.data.local.DocumentEntity
 import com.example.docscanai.ui.theme.IntelligentBlue
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ private val ScanBadgeText = Color(0xFF0D9488)
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onResultClick: (ScanRecord) -> Unit,
+    onResultClick: (DocumentEntity) -> Unit,
 ) {
     val context        = LocalContext.current
     val keyboard       = LocalSoftwareKeyboardController.current
@@ -81,11 +81,28 @@ fun SearchScreen(
 
     val filterChips = listOf("Smart match", "PDF", "Past 7 days", "OCR text")
 
-    val allScans by ScanHistoryRepository.scans.collectAsStateWithLifecycle()
+    val searchFlow = remember(query) {
+        if (query.length < 2) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        } else {
+            DatabaseModule.localDocumentRepository.searchDocuments(query)
+        }
+    }
+    val allScans by searchFlow.collectAsStateWithLifecycle(emptyList())
 
-    val results = remember(query, allScans) {
+    val results = remember(query, allScans, activeFilter) {
         if (query.length < 2) emptyList()
-        else allScans.filter { it.name.contains(query, ignoreCase = true) }
+        else allScans.filter { doc ->
+            when (activeFilter) {
+                "PDF" -> doc.name.endsWith(".pdf", ignoreCase = true) || doc.documentType == "PDF"
+                "Past 7 days" -> {
+                    val sevenDaysAgo = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                    doc.timestamp >= sevenDaysAgo
+                }
+                "OCR text" -> doc.ocrText != null && doc.ocrText.contains(query, ignoreCase = true)
+                else -> true // "Smart match" (includes everything from the DB query)
+            }
+        }
     }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -207,12 +224,22 @@ fun SearchScreen(
                             modifier      = Modifier.padding(bottom = 10.dp),
                         )
                     }
-                    items(results, key = { it.id }) { record ->
-                        SearchResultCard(
-                            record  = record,
-                            query   = query,
-                            onClick = { onResultClick(record) },
-                        )
+                    itemsIndexed(results, key = { _, it -> it.id }) { index, record ->
+                        var visible by remember { mutableStateOf(false) }
+                        LaunchedEffect(record.id) {
+                            kotlinx.coroutines.delay(index * 50L)
+                            visible = true
+                        }
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = visible,
+                            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { it / 4 }
+                        ) {
+                            SearchResultCard(
+                                record  = record,
+                                query   = query,
+                                onClick = { onResultClick(record) },
+                            )
+                        }
                         Spacer(Modifier.height(10.dp))
                     }
                 }
@@ -314,7 +341,7 @@ private fun AiAnswerCard(query: String, count: Int) {
 // ── Search result card ────────────────────────────────────────────────────────
 
 @Composable
-private fun SearchResultCard(record: ScanRecord, query: String, onClick: () -> Unit) {
+private fun SearchResultCard(record: DocumentEntity, query: String, onClick: () -> Unit) {
     val isPdf     = record.name.endsWith(".pdf", ignoreCase = true)
     val isGallery = record.id.startsWith("gallery")
 
@@ -364,8 +391,10 @@ private fun SearchResultCard(record: ScanRecord, query: String, onClick: () -> U
                     color      = TextPrimary,
                     maxLines   = 1,
                 )
+                val isOcrMatch = record.ocrText?.contains(query, ignoreCase = true) == true
+                val matchLabel = if (isOcrMatch) "OCR TEXT MATCH" else "FILENAME MATCH"
                 Text(
-                    "PAGE 1  ·  OCR MATCH",
+                    matchLabel,
                     fontSize      = 10.sp,
                     color         = LabelGray,
                     fontFamily    = FontFamily.Monospace,
@@ -374,6 +403,7 @@ private fun SearchResultCard(record: ScanRecord, query: String, onClick: () -> U
                 Spacer(Modifier.height(2.dp))
                 SnippetText(
                     name    = record.name,
+                    ocrText = record.ocrText,
                     keyword = query,
                 )
             }
@@ -384,36 +414,55 @@ private fun SearchResultCard(record: ScanRecord, query: String, onClick: () -> U
 // ── Inline keyword highlight ──────────────────────────────────────────────────
 
 @Composable
-private fun SnippetText(name: String, keyword: String) {
-    val lower  = name.lowercase()
+private fun SnippetText(name: String, ocrText: String?, keyword: String) {
     val kLower = keyword.lowercase()
-    val idx    = lower.indexOf(kLower)
-
-    // Build "…prefix keyword suffix…" context window
-    val fullSnippet = "…${name}…"
-    val snipIdx     = fullSnippet.lowercase().indexOf(kLower)
+    
+    // Determine which field actually matched.
+    // We prefer highlighting OCR text if it matches, otherwise fallback to filename.
+    val sourceText = if (ocrText != null && ocrText.lowercase().contains(kLower)) {
+        ocrText
+    } else {
+        name
+    }
+    
+    val snipIdx = sourceText.lowercase().indexOf(kLower)
 
     if (snipIdx < 0 || keyword.isBlank()) {
-        Text(fullSnippet, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
+        Text(sourceText, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp, maxLines = 2)
         return
+    }
+
+    // Build context window around the match (up to 40 chars before/after)
+    val start = maxOf(0, snipIdx - 40)
+    val end = minOf(sourceText.length, snipIdx + keyword.length + 40)
+    
+    val prefix = if (start > 0) "…" else ""
+    val suffix = if (end < sourceText.length) "…" else ""
+    
+    val fullSnippet = prefix + sourceText.substring(start, end).replace('\n', ' ') + suffix
+    val newSnipIdx = fullSnippet.lowercase().indexOf(kLower)
+
+    if (newSnipIdx < 0) {
+         Text(fullSnippet, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp, maxLines = 2)
+         return
     }
 
     val text = buildAnnotatedString {
         withStyle(SpanStyle(color = TextSecondary)) {
-            append(fullSnippet.substring(0, snipIdx))
+            append(fullSnippet.substring(0, newSnipIdx))
         }
         withStyle(SpanStyle(
             color      = HighlightText,
             background = HighlightBg,
             fontWeight = FontWeight.Medium,
         )) {
-            append(fullSnippet.substring(snipIdx, snipIdx + keyword.length))
+            append(fullSnippet.substring(newSnipIdx, newSnipIdx + keyword.length))
         }
         withStyle(SpanStyle(color = TextSecondary)) {
-            append(fullSnippet.substring(snipIdx + keyword.length))
+            append(fullSnippet.substring(newSnipIdx + keyword.length))
         }
     }
-    Text(text, fontSize = 13.sp, lineHeight = 18.sp)
+    Text(text, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 2)
 }
 
 // ── Idle state ────────────────────────────────────────────────────────────────
@@ -421,35 +470,11 @@ private fun SnippetText(name: String, keyword: String) {
 @Composable
 private fun SearchIdleState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier            = Modifier.padding(32.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(IntelligentBlue.copy(alpha = 0.08f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Search, null,
-                    tint     = IntelligentBlue,
-                    modifier = Modifier.size(32.dp))
-            }
-            Text(
-                "Search your documents",
-                fontSize   = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color      = TextPrimary,
-            )
-            Text(
-                "Search by filename, OCR-extracted text, or AI summaries",
-                fontSize  = 13.sp,
-                color     = TextSecondary,
-                textAlign = TextAlign.Center,
-                lineHeight = 19.sp,
-            )
-        }
+        com.example.docscanai.ui.components.AnimatedEmptyState(
+            icon = Icons.Default.Search,
+            title = "Search your documents",
+            subtitle = "Search by filename, OCR-extracted text, or AI summaries",
+        )
     }
 }
 
@@ -458,28 +483,11 @@ private fun SearchIdleState() {
 @Composable
 private fun SearchEmptyState(query: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier            = Modifier.padding(32.dp),
-        ) {
-            Icon(Icons.Default.SearchOff, null,
-                tint     = LabelGray,
-                modifier = Modifier.size(52.dp))
-            Text(
-                "No results for \"$query\"",
-                fontSize   = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color      = TextPrimary,
-            )
-            Text(
-                "Try different keywords or check your OCR text filters",
-                fontSize  = 13.sp,
-                color     = TextSecondary,
-                textAlign = TextAlign.Center,
-                lineHeight = 19.sp,
-            )
-        }
+        com.example.docscanai.ui.components.AnimatedEmptyState(
+            icon = Icons.Default.SearchOff,
+            title = "No results for \"$query\"",
+            subtitle = "Try different keywords or check your OCR text filters",
+        )
     }
 }
 
